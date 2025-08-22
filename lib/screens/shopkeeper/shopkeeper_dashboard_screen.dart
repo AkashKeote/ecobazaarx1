@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 
 class ShopkeeperDashboardScreen extends StatefulWidget {
@@ -12,71 +13,365 @@ class ShopkeeperDashboardScreen extends StatefulWidget {
 
 class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
     with TickerProviderStateMixin {
-  late TabController _tabController;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    _fadeController.forward();
+    _slideController.forward();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Store Dashboard'),
-        backgroundColor: const Color(0xFF1976D2),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final authProvider = Provider.of<AuthProvider>(
-                context,
-                listen: false,
-              );
-              await authProvider.logout();
-              if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
-              }
-            },
+      backgroundColor: const Color(0xFFF7F6F2),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 32.0,
+                  horizontal: 24.0,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFB5C7F7),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFB5C7F7).withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.store_rounded,
+                        size: 30,
+                        color: Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Consumer<AuthProvider>(
+                            builder: (context, authProvider, child) {
+                              return Text(
+                                'My Store Dashboard\nHello, ${authProvider.userName ?? 'Shopkeeper'}!',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF22223B),
+                                  height: 1.2,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () async {
+                        final authProvider = Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        );
+                        await authProvider.logout();
+                        if (mounted) {
+                          Navigator.pushReplacementNamed(context, '/login');
+                        }
+                      },
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFB5C7F7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.logout_rounded,
+                          color: Color(0xFF22223B),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(context, '/home');
+                      },
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9E79F),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.home_rounded,
+                          color: Color(0xFF22223B),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Quick Stats Cards
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    _PastelStatCard(
+                      title: 'Total Products',
+                      value: '247',
+                      color: const Color(0xFFB5C7F7),
+                      icon: Icons.inventory_rounded,
+                    ),
+                    const SizedBox(width: 16),
+                    _PastelStatCard(
+                      title: 'Orders Today',
+                      value: '18',
+                      color: const Color(0xFFF9E79F),
+                      icon: Icons.shopping_cart_rounded,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    _PastelStatCard(
+                      title: 'Revenue',
+                      value: '₹12.5K',
+                      color: const Color(0xFFD6EAF8),
+                      icon: Icons.currency_rupee_rounded,
+                    ),
+                    const SizedBox(width: 16),
+                    _PastelStatCard(
+                      title: 'Eco Rating',
+                      value: '4.8★',
+                      color: const Color(0xFFE8D5C4),
+                      icon: Icons.eco_rounded,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Store Management
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                child: Text(
+                  'Store Management',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.add_box_rounded,
+                        label: 'Add Product',
+                        color: const Color(0xFFF9E79F),
+                        onTap: () => _showAddProduct(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.inventory_rounded,
+                        label: 'Manage Stock',
+                        color: const Color(0xFFB5C7F7),
+                        onTap: () => _showManageStock(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.list_alt_rounded,
+                        label: 'View Orders',
+                        color: const Color(0xFFD6EAF8),
+                        onTap: () => _showOrders(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Store Performance
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                child: Text(
+                  'Store Performance',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Performance Overview Card
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'This Month\'s Performance',
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sales Growth: +24%',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFB5C7F7),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Customer Rating: 4.8/5',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF22223B),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      LinearProgressIndicator(
+                        value: 0.75,
+                        backgroundColor: const Color(0xFFF7F6F2),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFFB5C7F7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Sustainability Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                child: Text(
+                  'Sustainability Impact',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.eco_rounded,
+                        label: 'Eco Products',
+                        color: const Color(0xFFE8D5C4),
+                        onTap: () => _showEcoProducts(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.analytics_rounded,
+                        label: 'Impact Report',
+                        color: const Color(0xFFD6EAF8),
+                        onTap: () => _showImpactReport(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.trending_up_rounded,
+                        label: 'Improve Score',
+                        color: const Color(0xFFF9E79F),
+                        onTap: () => _showImprovementTips(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+            ],
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.store), text: 'Store'),
-            Tab(icon: Icon(Icons.inventory), text: 'Products'),
-            Tab(icon: Icon(Icons.eco), text: 'Sustainability'),
-            Tab(icon: Icon(Icons.analytics), text: 'Analytics'),
-          ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildStoreTab(),
-          _buildProductsTab(),
-          _buildSustainabilityTab(),
-          _buildAnalyticsTab(),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Add new product
-        },
-        backgroundColor: const Color(0xFF1976D2),
-        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => _showAddProduct(context),
+        backgroundColor: const Color(0xFFB5C7F7),
+        child: const Icon(
+          Icons.add,
+          color: Color(0xFF22223B),
+        ),
       ),
     );
   }
@@ -803,6 +1098,168 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
         fontWeight: FontWeight.bold,
         color: const Color(0xFF1976D2),
+      ),
+    );
+  }
+
+  // Shopkeeper action methods
+  void _showAddProduct(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Add Product...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFF9E79F),
+      ),
+    );
+  }
+
+  void _showManageStock(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Stock Management...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFB5C7F7),
+      ),
+    );
+  }
+
+  void _showOrders(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Orders...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFD6EAF8),
+      ),
+    );
+  }
+
+  void _showEcoProducts(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Eco Products...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFE8D5C4),
+      ),
+    );
+  }
+
+  void _showImpactReport(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Impact Report...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFD6EAF8),
+      ),
+    );
+  }
+
+  void _showImprovementTips(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Improvement Tips...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFF9E79F),
+      ),
+    );
+  }
+}
+
+class _PastelStatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final Color color;
+  final IconData icon;
+
+  const _PastelStatCard({
+    required this.title,
+    required this.value,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: const Color(0xFF22223B), size: 32),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF22223B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                color: const Color(0xFF22223B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PastelActionCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _PastelActionCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: const Color(0xFF22223B), size: 28),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF22223B),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

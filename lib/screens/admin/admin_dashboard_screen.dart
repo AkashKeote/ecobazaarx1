@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -11,65 +12,357 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     with TickerProviderStateMixin {
-  late TabController _tabController;
-  int _selectedIndex = 0;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    _fadeController.forward();
+    _slideController.forward();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('EcoBazaarX Admin Dashboard'),
-        backgroundColor: const Color(0xFF2E7D32),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final authProvider = Provider.of<AuthProvider>(
-                context,
-                listen: false,
-              );
-              await authProvider.logout();
-              if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
-              }
-            },
+      backgroundColor: const Color(0xFFF7F6F2),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 32.0,
+                  horizontal: 24.0,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8D5C4),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE8D5C4).withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.admin_panel_settings_rounded,
+                        size: 30,
+                        color: Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Consumer<AuthProvider>(
+                            builder: (context, authProvider, child) {
+                              return Text(
+                                'Admin Dashboard\nHello, ${authProvider.userName ?? 'Admin'}!',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF22223B),
+                                  height: 1.2,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () async {
+                        final authProvider = Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        );
+                        await authProvider.logout();
+                        if (mounted) {
+                          Navigator.pushReplacementNamed(context, '/login');
+                        }
+                      },
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8D5C4),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.logout_rounded,
+                          color: Color(0xFF22223B),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(context, '/home');
+                      },
+                      icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFB5C7F7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.home_rounded,
+                          color: Color(0xFF22223B),
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Quick Stats Cards
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    _PastelStatCard(
+                      title: 'Total Users',
+                      value: '1,247',
+                      color: const Color(0xFFB5C7F7),
+                      icon: Icons.people_rounded,
+                    ),
+                    const SizedBox(width: 16),
+                    _PastelStatCard(
+                      title: 'Active Stores',
+                      value: '89',
+                      color: const Color(0xFFF9E79F),
+                      icon: Icons.store_rounded,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    _PastelStatCard(
+                      title: 'Carbon Saved',
+                      value: '2.4T',
+                      color: const Color(0xFFD6EAF8),
+                      icon: Icons.eco_rounded,
+                    ),
+                    const SizedBox(width: 16),
+                    _PastelStatCard(
+                      title: 'Revenue',
+                      value: '₹89.2L',
+                      color: const Color(0xFFE8D5C4),
+                      icon: Icons.currency_rupee_rounded,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Admin Actions
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                child: Text(
+                  'Admin Controls',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.people_rounded,
+                        label: 'Manage Users',
+                        color: const Color(0xFFB5C7F7),
+                        onTap: () => _showUserManagement(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.store_rounded,
+                        label: 'Store Analytics',
+                        color: const Color(0xFFF9E79F),
+                        onTap: () => _showStoreAnalytics(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.eco_rounded,
+                        label: 'Carbon Reports',
+                        color: const Color(0xFFD6EAF8),
+                        onTap: () => _showCarbonReports(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // System Overview
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                child: Text(
+                  'System Overview',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // System Status Card
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'System Status: Operational',
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Uptime: 99.8%',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFB5C7F7),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Active Sessions: 347',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF22223B),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      LinearProgressIndicator(
+                        value: 0.8,
+                        backgroundColor: const Color(0xFFF7F6F2),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFFB5C7F7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Settings Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                child: Text(
+                  'Platform Settings',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.settings_rounded,
+                        label: 'System Config',
+                        color: const Color(0xFFE8D5C4),
+                        onTap: () => _showSystemSettings(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.security_rounded,
+                        label: 'Security',
+                        color: const Color(0xFFD6EAF8),
+                        onTap: () => _showSecuritySettings(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.backup_rounded,
+                        label: 'Backup',
+                        color: const Color(0xFFF9E79F),
+                        onTap: () => _showBackupSettings(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+            ],
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.dashboard), text: 'Overview'),
-            Tab(icon: Icon(Icons.people), text: 'Users'),
-            Tab(icon: Icon(Icons.eco), text: 'Carbon Footprint'),
-            Tab(icon: Icon(Icons.settings), text: 'Settings'),
-          ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildOverviewTab(),
-          _buildUsersTab(),
-          _buildCarbonFootprintTab(),
-          _buildSettingsTab(),
-        ],
       ),
     );
   }
@@ -651,6 +944,168 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         ),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: onTap,
+      ),
+    );
+  }
+
+  // Admin action methods
+  void _showUserManagement(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening User Management...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFB5C7F7),
+      ),
+    );
+  }
+
+  void _showStoreAnalytics(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Store Analytics...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFF9E79F),
+      ),
+    );
+  }
+
+  void _showCarbonReports(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Carbon Reports...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFD6EAF8),
+      ),
+    );
+  }
+
+  void _showSystemSettings(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening System Settings...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFE8D5C4),
+      ),
+    );
+  }
+
+  void _showSecuritySettings(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Security Settings...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFD6EAF8),
+      ),
+    );
+  }
+
+  void _showBackupSettings(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening Backup Settings...', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFF9E79F),
+      ),
+    );
+  }
+}
+
+class _PastelStatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final Color color;
+  final IconData icon;
+
+  const _PastelStatCard({
+    required this.title,
+    required this.value,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: const Color(0xFF22223B), size: 32),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF22223B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                color: const Color(0xFF22223B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PastelActionCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _PastelActionCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: const Color(0xFF22223B), size: 28),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF22223B),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
