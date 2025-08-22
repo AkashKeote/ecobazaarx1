@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'dart:math';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../shopping/shopping_cart_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../shopkeeper/shopkeeper_dashboard_screen.dart';
@@ -2025,8 +2026,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               children: [
                                 IconButton(
                                   onPressed: () {
-                                    if (cartProvider.isInCart(product['id'] ?? product['name'])) {
-                                      cartProvider.removeSingleItem(product['id'] ?? product['name']);
+                                    final productId = product['id'] ?? product['name'];
+                                    if (cartProvider.isInCart(productId)) {
+                                      cartProvider.removeSingleItem(productId);
                                     }
                                   },
                                   icon: Icon(Icons.remove, color: product['color']),
