@@ -113,10 +113,10 @@ class _LoginScreenState extends State<LoginScreen>
         Navigator.pushReplacementNamed(context, '/home');
         break;
       case UserRole.shopkeeper:
-        Navigator.pushReplacementNamed(context, '/shopkeeper');
+       // Navigator.pushReplacementNamed(context, '/shopkeeper');
         break;
       case UserRole.admin:
-        Navigator.pushReplacementNamed(context, '/admin');
+       // Navigator.pushReplacementNamed(context, '/admin');
         break;
     }
   }
