@@ -49,7 +49,7 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       if (success && mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        _navigateToRoleSpecificDashboard(context, _selectedRole);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -70,6 +70,20 @@ class _SignupScreenState extends State<SignupScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  void _navigateToRoleSpecificDashboard(BuildContext context, UserRole role) {
+    switch (role) {
+      case UserRole.customer:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case UserRole.shopkeeper:
+        Navigator.pushReplacementNamed(context, '/shopkeeper');
+        break;
+      case UserRole.admin:
+        Navigator.pushReplacementNamed(context, '/admin');
+        break;
     }
   }
 

@@ -41,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success) {
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+          _navigateToRoleSpecificDashboard(context, _selectedRole);
         }
       } else {
         if (mounted) {
@@ -68,6 +68,20 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  void _navigateToRoleSpecificDashboard(BuildContext context, UserRole role) {
+    switch (role) {
+      case UserRole.customer:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case UserRole.shopkeeper:
+        Navigator.pushReplacementNamed(context, '/shopkeeper');
+        break;
+      case UserRole.admin:
+        Navigator.pushReplacementNamed(context, '/admin');
+        break;
     }
   }
 

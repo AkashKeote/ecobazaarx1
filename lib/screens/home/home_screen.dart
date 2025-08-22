@@ -139,6 +139,32 @@ class HomeScreen extends StatelessWidget {
                               fontSize: 14,
                             ),
                           ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () {
+                              _navigateToRoleSpecificDashboard(
+                                context,
+                                authProvider.userRole!,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2196F3),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                            ),
+                            child: Text(
+                              _getRoleSpecificButtonText(
+                                authProvider.userRole!,
+                              ),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -182,6 +208,31 @@ class HomeScreen extends StatelessWidget {
         return 'Add products, manage inventory, and help customers make sustainable choices.';
       case UserRole.admin:
         return 'Monitor the platform, manage users, and ensure eco-friendly practices.';
+    }
+  }
+
+  String _getRoleSpecificButtonText(UserRole role) {
+    switch (role) {
+      case UserRole.customer:
+        return 'Start Shopping';
+      case UserRole.shopkeeper:
+        return 'Go to Store Dashboard';
+      case UserRole.admin:
+        return 'Go to Admin Dashboard';
+    }
+  }
+
+  void _navigateToRoleSpecificDashboard(BuildContext context, UserRole role) {
+    switch (role) {
+      case UserRole.customer:
+        // For customers, stay on home screen or navigate to shopping
+        break;
+      case UserRole.shopkeeper:
+        Navigator.pushReplacementNamed(context, '/shopkeeper');
+        break;
+      case UserRole.admin:
+        Navigator.pushReplacementNamed(context, '/admin');
+        break;
     }
   }
 }

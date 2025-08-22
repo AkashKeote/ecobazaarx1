@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/shopkeeper/shopkeeper_dashboard_screen.dart';
 import 'providers/auth_provider.dart';
 
 void main() {
@@ -95,6 +97,8 @@ class EcoBazaarXApp extends StatelessWidget {
           '/login': (context) => const LoginScreen(),
           '/signup': (context) => const SignupScreen(),
           '/home': (context) => const HomeScreen(),
+          '/admin': (context) => const AdminDashboardScreen(),
+          '/shopkeeper': (context) => const ShopkeeperDashboardScreen(),
         },
       ),
     );
