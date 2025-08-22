@@ -1,214 +1,556 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('EcoBazaarX'),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final authProvider = Provider.of<AuthProvider>(
-                context,
-                listen: false,
-              );
-              await authProvider.logout();
-              if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
-              }
-            },
+      backgroundColor: const Color(0xFFF7F6F2),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFF7F6F2), Color(0xFFB5C7F7), Color(0xFFF9E79F)],
           ),
-        ],
-      ),
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo
-              const Icon(
-                Icons.shopping_bag,
-                color: Color(0xFF2196F3),
-                size: 100,
-              ),
-              const SizedBox(height: 32),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
 
-              // Welcome Message
-              Text(
-                'Welcome to EcoBazaarX!',
-                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  color: const Color(0xFF2196F3),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 32,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Your Carbon Footprint Aware Shopping Assistant',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: const Color(0xFF757575),
-                  fontSize: 18,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-
-              // User Info Card
-              Consumer<AuthProvider>(
-                builder: (context, authProvider, child) {
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Hello, ${authProvider.userName ?? 'User'}!',
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                authProvider.getRoleIcon(
-                                  authProvider.userRole!,
-                                ),
-                                color: const Color(0xFF2196F3),
-                                size: 24,
+                  // Header Section
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFB5C7F7),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFFB5C7F7,
+                                    ).withOpacity(0.3),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                authProvider.getRoleDisplayName(
-                                  authProvider.userRole!,
+                              child: const Icon(
+                                Icons.eco_rounded,
+                                size: 30,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Consumer<AuthProvider>(
+                                    builder: (context, authProvider, child) {
+                                      return Text(
+                                        'Hello, ${authProvider.userName ?? 'User'}!',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF22223B),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  Text(
+                                    'Welcome to EcoBazaarX',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      color: const Color(
+                                        0xFF22223B,
+                                      ).withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () async {
+                                final authProvider = Provider.of<AuthProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                await authProvider.logout();
+                                if (mounted) {
+                                  Navigator.pushReplacementNamed(
+                                    context,
+                                    '/login',
+                                  );
+                                }
+                              },
+                              icon: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                style: const TextStyle(
-                                  color: Color(0xFF2196F3),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
+                                child: const Icon(
+                                  Icons.logout_rounded,
+                                  color: Color(0xFF22223B),
+                                  size: 20,
                                 ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Quick Stats
+                  SlideTransition(
+                    position: _slideAnimation,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your Impact',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF22223B),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildPastelStatCard(
+                                'Carbon Saved',
+                                '2.4 kg',
+                                Icons.eco_rounded,
+                                const Color(0xFFF9E79F),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildPastelStatCard(
+                                'Products',
+                                '12',
+                                Icons.shopping_bag_rounded,
+                                const Color(0xFFB5C7F7),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildPastelStatCard(
+                                'Trees Planted',
+                                '0.12',
+                                Icons.park_rounded,
+                                const Color(0xFFE8D5C4),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildPastelStatCard(
+                                'Rating',
+                                '4.8★',
+                                Icons.star_rounded,
+                                const Color(0xFFD6EAF8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Role-based Dashboard Button
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
+                        if (authProvider.userRole == null)
+                          return const SizedBox.shrink();
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Quick Access',
+                              style: GoogleFonts.poppins(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF22223B),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 64,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  _navigateToRoleSpecificDashboard(
+                                    context,
+                                    authProvider.userRole!,
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _getRoleSpecificColor(
+                                    authProvider.userRole!,
+                                  ),
+                                  foregroundColor: const Color(0xFF22223B),
+                                  elevation: 0,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _getRoleSpecificIcon(
+                                        authProvider.userRole!,
+                                      ),
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      _getRoleSpecificButtonText(
+                                        authProvider.userRole!,
+                                      ),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Features Section
+                  SlideTransition(
+                    position: _slideAnimation,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Discover Features',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF22223B),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildFeatureCard(
+                          'Carbon Footprint Calculator',
+                          'Calculate your shopping impact',
+                          Icons.calculate_rounded,
+                          const Color(0xFFF9E79F),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildFeatureCard(
+                          'Eco-Friendly Products',
+                          'Browse sustainable alternatives',
+                          Icons.eco_rounded,
+                          const Color(0xFFB5C7F7),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildFeatureCard(
+                          'Sustainability Tips',
+                          'Learn eco-friendly practices',
+                          Icons.lightbulb_rounded,
+                          const Color(0xFFE8D5C4),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // Recent Activity
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Recent Activity',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF22223B),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.08),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                          child: Column(
+                            children: [
+                              _buildActivityItem(
+                                'Bought organic cotton t-shirt',
+                                '2 hours ago',
+                                Icons.shopping_bag_rounded,
+                                const Color(0xFFF9E79F),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildActivityItem(
+                                'Calculated carbon footprint',
+                                '1 day ago',
+                                Icons.calculate_rounded,
+                                const Color(0xFFB5C7F7),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildActivityItem(
+                                'Read sustainability tips',
+                                '2 days ago',
+                                Icons.lightbulb_rounded,
+                                const Color(0xFFE8D5C4),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 24),
+                  ),
 
-              // Role-specific content
-              Consumer<AuthProvider>(
-                builder: (context, authProvider, child) {
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        children: [
-                          Icon(
-                            _getRoleSpecificIcon(authProvider.userRole!),
-                            size: 48,
-                            color: const Color(0xFF2196F3),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _getRoleSpecificTitle(authProvider.userRole!),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _getRoleSpecificDescription(authProvider.userRole!),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Color(0xFF757575),
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: () {
-                              _navigateToRoleSpecificDashboard(
-                                context,
-                                authProvider.userRole!,
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2196F3),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 16,
-                              ),
-                            ),
-                            child: Text(
-                              _getRoleSpecificButtonText(
-                                authProvider.userRole!,
-                              ),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                  const SizedBox(height: 40),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  IconData _getRoleSpecificIcon(UserRole role) {
-    switch (role) {
-      case UserRole.customer:
-        return Icons.shopping_cart;
-      case UserRole.shopkeeper:
-        return Icons.store;
-      case UserRole.admin:
-        return Icons.admin_panel_settings;
-    }
+  Widget _buildPastelStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF22223B), size: 28),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF22223B).withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  String _getRoleSpecificTitle(UserRole role) {
-    switch (role) {
-      case UserRole.customer:
-        return 'Start Shopping!';
-      case UserRole.shopkeeper:
-        return 'Manage Your Store';
-      case UserRole.admin:
-        return 'Admin Dashboard';
-    }
+  Widget _buildFeatureCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF22223B), size: 32),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: const Color(0xFF22223B).withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            color: const Color(0xFF22223B).withOpacity(0.5),
+            size: 16,
+          ),
+        ],
+      ),
+    );
   }
 
-  String _getRoleSpecificDescription(UserRole role) {
-    switch (role) {
-      case UserRole.customer:
-        return 'Browse eco-friendly products and track your carbon footprint while shopping.';
-      case UserRole.shopkeeper:
-        return 'Add products, manage inventory, and help customers make sustainable choices.';
-      case UserRole.admin:
-        return 'Monitor the platform, manage users, and ensure eco-friendly practices.';
-    }
+  Widget _buildActivityItem(
+    String title,
+    String time,
+    IconData icon,
+    Color color,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: const Color(0xFF22223B), size: 20),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  color: const Color(0xFF22223B),
+                ),
+              ),
+              Text(
+                time,
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF22223B).withOpacity(0.6),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   String _getRoleSpecificButtonText(UserRole role) {
@@ -219,6 +561,28 @@ class HomeScreen extends StatelessWidget {
         return 'Go to Store Dashboard';
       case UserRole.admin:
         return 'Go to Admin Dashboard';
+    }
+  }
+
+  Color _getRoleSpecificColor(UserRole role) {
+    switch (role) {
+      case UserRole.customer:
+        return const Color(0xFFF9E79F);
+      case UserRole.shopkeeper:
+        return const Color(0xFFB5C7F7);
+      case UserRole.admin:
+        return const Color(0xFFE8D5C4);
+    }
+  }
+
+  IconData _getRoleSpecificIcon(UserRole role) {
+    switch (role) {
+      case UserRole.customer:
+        return Icons.shopping_bag_rounded;
+      case UserRole.shopkeeper:
+        return Icons.store_rounded;
+      case UserRole.admin:
+        return Icons.admin_panel_settings_rounded;
     }
   }
 
