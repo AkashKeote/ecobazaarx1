@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/firebase_service.dart';
 
 enum UserRole { customer, shopkeeper, admin }
 
@@ -37,37 +36,27 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> login(String email, String password, UserRole role) async {
-    try {
-      // Use Firebase authentication
-      final userCredential = await FirebaseService.signInWithEmailAndPassword(email, password);
-      
-      if (userCredential != null && userCredential.user != null) {
-        _isAuthenticated = true;
-        _userEmail = email;
-        _userName = userCredential.user!.displayName ?? email.split('@')[0];
-        _userRole = role;
+    // Simulate API call
+    await Future.delayed(const Duration(seconds: 1));
 
-        // Save to local storage
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isAuthenticated', true);
-        await prefs.setString('userEmail', email);
-        await prefs.setString('userName', _userName!);
-        await prefs.setString('userRole', role.toString());
+    // For demo purposes, accept any email/password combination
+    if (email.isNotEmpty && password.isNotEmpty) {
+      _isAuthenticated = true;
+      _userEmail = email;
+      _userName = email.split('@')[0]; // Use email prefix as username
+      _userRole = role;
 
-        // Log analytics event
-        await FirebaseService.logEvent('user_login', {
-          'email': email,
-          'role': getRoleDisplayName(role),
-        });
+      // Save to local storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isAuthenticated', true);
+      await prefs.setString('userEmail', email);
+      await prefs.setString('userName', _userName!);
+      await prefs.setString('userRole', role.toString());
 
-        notifyListeners();
-        return true;
-      }
-      return false;
-    } catch (e) {
-      print('Login error: $e');
-      return false;
+      notifyListeners();
+      return true;
     }
+    return false;
   }
 
   Future<bool> signup(
@@ -77,71 +66,43 @@ class AuthProvider extends ChangeNotifier {
     String confirmPassword,
     UserRole role,
   ) async {
-    try {
-      if (name.isNotEmpty &&
-          email.isNotEmpty &&
-          password.isNotEmpty &&
-          password == confirmPassword) {
-        
-        // Use Firebase authentication
-        final userCredential = await FirebaseService.signUpWithEmailAndPassword(
-          email, 
-          password, 
-          name, 
-          getRoleDisplayName(role),
-        );
-        
-        if (userCredential != null && userCredential.user != null) {
-          _isAuthenticated = true;
-          _userEmail = email;
-          _userName = name;
-          _userRole = role;
+    // Simulate API call
+    await Future.delayed(const Duration(seconds: 1));
 
-          // Save to local storage
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isAuthenticated', true);
-          await prefs.setString('userEmail', email);
-          await prefs.setString('userName', name);
-          await prefs.setString('userRole', role.toString());
+    // For demo purposes, accept any valid input
+    if (name.isNotEmpty &&
+        email.isNotEmpty &&
+        password.isNotEmpty &&
+        password == confirmPassword) {
+      _isAuthenticated = true;
+      _userEmail = email;
+      _userName = name;
+      _userRole = role;
 
-          // Log analytics event
-          await FirebaseService.logEvent('user_signup', {
-            'email': email,
-            'role': getRoleDisplayName(role),
-          });
+      // Save to local storage
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isAuthenticated', true);
+      await prefs.setString('userEmail', email);
+      await prefs.setString('userName', name);
+      await prefs.setString('userRole', role.toString());
 
-          notifyListeners();
-          return true;
-        }
-      }
-      return false;
-    } catch (e) {
-      print('Signup error: $e');
-      return false;
+      notifyListeners();
+      return true;
     }
+    return false;
   }
 
   Future<void> logout() async {
-    try {
-      // Sign out from Firebase
-      await FirebaseService.signOut();
-      
-      _isAuthenticated = false;
-      _userEmail = null;
-      _userName = null;
-      _userRole = null;
+    _isAuthenticated = false;
+    _userEmail = null;
+    _userName = null;
+    _userRole = null;
 
-      // Clear local storage
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+    // Clear local storage
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
 
-      // Log analytics event
-      await FirebaseService.logEvent('user_logout', null);
-
-      notifyListeners();
-    } catch (e) {
-      print('Logout error: $e');
-    }
+    notifyListeners();
   }
 
   String getRoleDisplayName(UserRole role) {

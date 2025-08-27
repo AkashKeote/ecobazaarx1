@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'dart:math';
 import '../../providers/auth_provider.dart';
-import '../../services/firebase_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -95,7 +94,89 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   };
   
      // User management data
-   List<Map<String, dynamic>> _users = [];
+   List<Map<String, dynamic>> _users = [
+     {
+       'id': '1',
+       'name': 'John Doe',
+       'email': 'john@example.com',
+       'role': 'Customer',
+       'status': 'Active',
+       'joinDate': '2024-01-15',
+     },
+     {
+       'id': '2',
+       'name': 'Jane Smith',
+       'email': 'jane@example.com',
+       'role': 'Shopkeeper',
+       'status': 'Active',
+       'joinDate': '2024-01-10',
+     },
+     {
+       'id': '3',
+       'name': 'Bob Wilson',
+       'email': 'bob@example.com',
+       'role': 'Customer',
+       'status': 'Inactive',
+       'joinDate': '2024-01-05',
+     },
+     {
+       'id': '4',
+       'name': 'Alice Brown',
+       'email': 'alice@example.com',
+       'role': 'Admin',
+       'status': 'Active',
+       'joinDate': '2024-01-01',
+     },
+     // Additional users that would be shown from customer home screen dashboard
+     {
+       'id': '5',
+       'name': 'Sarah Johnson',
+       'email': 'sarah@example.com',
+       'role': 'Customer',
+       'status': 'Active',
+       'joinDate': '2024-01-20',
+     },
+     {
+       'id': '6',
+       'name': 'Mike Davis',
+       'email': 'mike@example.com',
+       'role': 'Customer',
+       'status': 'Active',
+       'joinDate': '2024-01-18',
+     },
+     {
+       'id': '7',
+       'name': 'Emily Wilson',
+       'email': 'emily@example.com',
+       'role': 'Shopkeeper',
+       'status': 'Active',
+       'joinDate': '2024-01-12',
+     },
+     {
+       'id': '8',
+       'name': 'David Miller',
+       'email': 'david@example.com',
+       'role': 'Customer',
+       'status': 'Active',
+       'joinDate': '2024-01-16',
+     },
+     {
+       'id': '9',
+       'name': 'Lisa Anderson',
+       'email': 'lisa@example.com',
+       'role': 'Customer',
+       'status': 'Inactive',
+       'joinDate': '2024-01-08',
+     },
+     {
+       'id': '10',
+       'name': 'Tom Garcia',
+       'email': 'tom@example.com',
+       'role': 'Shopkeeper',
+       'status': 'Active',
+       'joinDate': '2024-01-14',
+     },
+   ];
   
   // Filter variables
   String _currentFilter = 'All';
@@ -149,9 +230,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     // Start real-time updates
     _startRealTimeUpdates();
     
-    // Load users from Firebase
-    _loadUsersFromFirebase();
-    
     // Debug: Print user count
     print('AdminDashboard: Initialized with ${_users.length} users');
   }
@@ -204,19 +282,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       if (Random().nextBool()) {
         _storeCategories[category] = (_storeCategories[category]! + Random().nextInt(3) - 1).clamp(0, 100);
       }
-    }
-  }
-
-  // Load users from Firebase
-  Future<void> _loadUsersFromFirebase() async {
-    try {
-      final users = await FirebaseService.getAllUsers();
-      setState(() {
-        _users = users;
-      });
-      print('AdminDashboard: Loaded ${_users.length} users from Firebase');
-    } catch (e) {
-      print('Error loading users from Firebase: $e');
     }
   }
 
@@ -2451,7 +2516,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () async {
+            onPressed: () {
               if (nameController.text.isNotEmpty && emailController.text.isNotEmpty) {
                 final newUser = {
                   'id': '${_users.length + 1}',
@@ -2462,11 +2527,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   'joinDate': DateTime.now().toString().split(' ')[0],
                 };
                 
-                                                  // Add user to Firebase
-                 await FirebaseService.addUser(newUser);
-                 
-                 // Reload users from Firebase
-                 await _loadUsersFromFirebase();
+                                                  setState(() {
+                   _users.add(newUser);
+                 });
                  
                  Navigator.pop(context);
                  ScaffoldMessenger.of(context).showSnackBar(
@@ -2747,18 +2810,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
              onPressed: () => Navigator.pop(context),
              child: const Text('Cancel'),
            ),
-                        ElevatedButton(
-                                       onPressed: () async {
-                // Find user by email and get their ID
-                final userToDelete = _users.firstWhere((user) => user['email'] == email);
-                final userId = userToDelete['id'];
-                
-                // Delete from Firebase
-                await FirebaseService.deleteUser(userId);
-                
-                // Reload users from Firebase
-                await _loadUsersFromFirebase();
-                
+           ElevatedButton(
+                                       onPressed: () {
+                setState(() {
+                  _users.removeWhere((user) => user['email'] == email);
+                });
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
