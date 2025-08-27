@@ -6,6 +6,7 @@ import 'dart:math';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../shopping/shopping_cart_screen.dart';
+import '../shopping/product_catalog_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../shopkeeper/shopkeeper_dashboard_screen.dart';
 
@@ -19,9 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _slideController;
-  late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _pulseAnimation;
   
   // Real-time data variables
   Timer? _realTimeTimer;
@@ -38,6 +37,54 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     "New sustainable store opened nearby",
   ];
   int _activityIndex = 0;
+  
+  // New interactive features
+  bool _isNotificationsEnabled = true;
+  bool _isDarkMode = false;
+  int _ecoPoints = 1250;
+  int _streakDays = 7;
+  
+  List<Map<String, dynamic>> _wishlist = [
+    {
+      'name': 'Solar Phone Charger',
+      'price': '₹1299',
+      'color': const Color(0xFFB5C7F7),
+      'icon': Icons.solar_power_rounded,
+    },
+    {
+      'name': 'Reusable Shopping Bag',
+      'price': '₹299',
+      'color': const Color(0xFFE8D5C4),
+      'icon': Icons.shopping_bag_rounded,
+    },
+  ];
+  
+  List<Map<String, dynamic>> _ecoChallenges = [
+    {
+      'title': 'Zero Waste Week',
+      'description': 'Go 7 days without producing any waste',
+      'progress': 0.6,
+      'reward': '500 Eco Points',
+      'color': const Color(0xFFB5C7F7),
+      'icon': Icons.recycling_rounded,
+    },
+    {
+      'title': 'Carbon Footprint',
+      'description': 'Reduce your daily carbon footprint by 20%',
+      'progress': 0.8,
+      'reward': '300 Eco Points',
+      'color': const Color(0xFFF9E79F),
+      'icon': Icons.eco_rounded,
+    },
+    {
+      'title': 'Local Shopping',
+      'description': 'Buy from 5 local eco-friendly stores',
+      'progress': 0.4,
+      'reward': '200 Eco Points',
+      'color': const Color(0xFFE8D5C4),
+      'icon': Icons.store_rounded,
+    },
+  ];
   
   // Live notifications
   List<Map<String, dynamic>> _notifications = [
@@ -69,43 +116,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
     );
 
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    );
-
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
     _fadeController.forward();
     _slideController.forward();
-    _pulseController.repeat(reverse: true);
+    // Remove continuous pulsing to improve performance
+    // _pulseController.repeat(reverse: true);
 
     // Start real-time updates
     _startRealTimeUpdates();
   }
 
   void _startRealTimeUpdates() {
-    _realTimeTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    _realTimeTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (mounted) {
         setState(() {
           // Update real-time data with realistic increments
-          _carbonSaved += (Random().nextDouble() * 0.1);
-          _productsViewed += Random().nextInt(3);
-          _onlineUsers += Random().nextInt(20) - 10;
-          _todaysSavings += (Random().nextDouble() * 5);
-          _nearbyStores = 8 + Random().nextInt(5);
+          _carbonSaved += (Random().nextDouble() * 0.05);
+          _productsViewed += Random().nextInt(2);
+          _onlineUsers += Random().nextInt(10) - 5;
+          _todaysSavings += (Random().nextDouble() * 2);
+          _nearbyStores = 8 + Random().nextInt(3);
           
           // Cycle through activities
           _activityIndex = (_activityIndex + 1) % _liveActivities.length;
           
-          // Occasionally add new notifications
-          if (Random().nextDouble() < 0.3) {
+          // Occasionally add new notifications (reduced frequency)
+          if (Random().nextDouble() < 0.2) {
             _addRandomNotification();
           }
         });
@@ -144,7 +183,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
-    _pulseController.dispose();
     _realTimeTimer?.cancel();
     super.dispose();
   }
@@ -174,9 +212,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         Row(
                           children: [
-                            ScaleTransition(
-                              scale: _pulseAnimation,
-                              child: Container(
+                            Container(
                                 width: 60,
                                 height: 60,
                                 decoration: BoxDecoration(
@@ -194,7 +230,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   Icons.eco_rounded,
                                   size: 30,
                                   color: Colors.white,
-                                ),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -718,6 +753,319 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       itemBuilder: (context, index) {
                         return _buildTrendingProductCard(index);
                       },
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Eco Points & Streak Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFFB5C7F7),
+                                  const Color(0xFFB5C7F7).withOpacity(0.8),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFB5C7F7).withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.stars_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Eco Points',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '$_ecoPoints',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Level ${(_ecoPoints / 100).floor()}',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white.withOpacity(0.8),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFFF9E79F),
+                                  const Color(0xFFF9E79F).withOpacity(0.8),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFF9E79F).withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.local_fire_department_rounded,
+                                      color: const Color(0xFF22223B),
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Streak',
+                                      style: GoogleFonts.poppins(
+                                        color: const Color(0xFF22223B),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '$_streakDays days',
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFF22223B),
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Keep it up! 🔥',
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFF22223B).withOpacity(0.7),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Eco Challenges Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Eco Challenges',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF22223B),
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => _showAllChallenges(),
+                          child: Text(
+                            'View All',
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFFB5C7F7),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  SizedBox(
+                    height: 200,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _ecoChallenges.length,
+                      itemBuilder: (context, index) {
+                        final challenge = _ecoChallenges[index];
+                        return _buildChallengeCard(challenge);
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Wishlist Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                    child: Row(
+                      children: [
+                        Text(
+                          'My Wishlist',
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF22223B),
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => _showWishlist(),
+                          child: Text(
+                            'View All',
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFFB5C7F7),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  SizedBox(
+                    height: 140,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _wishlist.length,
+                      itemBuilder: (context, index) {
+                        final item = _wishlist[index];
+                        return _buildWishlistCard(item);
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // Settings & Preferences Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                    child: Text(
+                      'Settings & Preferences',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      children: [
+                        _buildSettingsCard(
+                          'Notifications',
+                          'Manage your notification preferences',
+                          Icons.notifications_rounded,
+                          const Color(0xFFB5C7F7),
+                          () => _showNotificationSettings(),
+                          trailing: Switch(
+                            value: _isNotificationsEnabled,
+                            onChanged: (value) {
+                              setState(() {
+                                _isNotificationsEnabled = value;
+                              });
+                              _showSnackBar(
+                                value ? 'Notifications enabled' : 'Notifications disabled',
+                              );
+                            },
+                            activeColor: const Color(0xFFB5C7F7),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildSettingsCard(
+                          'Dark Mode',
+                          'Switch between light and dark themes',
+                          Icons.dark_mode_rounded,
+                          const Color(0xFFE8D5C4),
+                          () {
+                            setState(() {
+                              _isDarkMode = !_isDarkMode;
+                            });
+                            _showSnackBar(
+                              _isDarkMode ? 'Dark mode enabled' : 'Light mode enabled',
+                            );
+                          },
+                          trailing: Switch(
+                            value: _isDarkMode,
+                            onChanged: (value) {
+                              setState(() {
+                                _isDarkMode = value;
+                              });
+                              _showSnackBar(
+                                value ? 'Dark mode enabled' : 'Light mode enabled',
+                              );
+                            },
+                            activeColor: const Color(0xFFE8D5C4),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildSettingsCard(
+                          'Eco Profile',
+                          'View and edit your eco profile',
+                          Icons.person_rounded,
+                          const Color(0xFFF9E79F),
+                          () => _showEcoProfile(),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildSettingsCard(
+                          'Help & Support',
+                          'Get help and contact support',
+                          Icons.help_rounded,
+                          const Color(0xFFD6EAF8),
+                          () => _showHelpSupport(),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -1286,7 +1634,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const ShoppingCartScreen(),
+        builder: (context) => const ProductCatalogScreen(),
       ),
     );
   }
@@ -2352,9 +2700,718 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         break;
     }
   }
+
+  // New helper methods for enhanced functionality
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.poppins(),
+        ),
+        backgroundColor: const Color(0xFFB5C7F7),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return Colors.green;
+      case 'in transit':
+        return const Color(0xFFB5C7F7);
+      case 'processing':
+        return const Color(0xFFF9E79F);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildChallengeCard(Map<String, dynamic> challenge) {
+    return Container(
+      width: 280,
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: challenge['color'].withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Icon(
+                  challenge['icon'],
+                  color: challenge['color'],
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      challenge['title'],
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    Text(
+                      challenge['reward'],
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: challenge['color'],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            challenge['description'],
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Progress',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  Text(
+                    '${(challenge['progress'] * 100).toInt()}%',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: challenge['color'],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: challenge['progress'],
+                backgroundColor: challenge['color'].withOpacity(0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(challenge['color']),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWishlistCard(Map<String, dynamic> item) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: item['color'].withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(
+                  item['icon'],
+                  color: item['color'],
+                  size: 18,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _wishlist.remove(item);
+                  });
+                  _showSnackBar('Removed from wishlist');
+                },
+                child: const Icon(Icons.favorite, color: Colors.red, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: Text(
+              item['name'],
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF22223B),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                item['price'],
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: item['color'],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _addToWishlistCart(item),
+                child: Icon(
+                  Icons.add_shopping_cart_rounded,
+                  color: item['color'],
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard(String title, String subtitle, IconData icon, Color color, VoidCallback onTap, {Widget? trailing}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null) trailing,
+          ],
+        ),
+      ),
+    );
+  }
+
+
+
+
+
+  void _showAllChallenges() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Eco Challenges',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _ecoChallenges.length,
+                itemBuilder: (context, index) {
+                  final challenge = _ecoChallenges[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: _buildChallengeCard(challenge),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showWishlist() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'My Wishlist',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _wishlist.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.favorite_border_rounded,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Your wishlist is empty',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Add items to your wishlist while shopping',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _wishlist.length,
+                      itemBuilder: (context, index) {
+                        final item = _wishlist[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: _buildWishlistCard(item),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showNotificationSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'Notification Settings',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF22223B),
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildNotificationOption('Order Updates', true),
+            _buildNotificationOption('Eco Tips', true),
+            _buildNotificationOption('New Products', false),
+            _buildNotificationOption('Community Updates', true),
+            _buildNotificationOption('Special Offers', false),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Save',
+              style: GoogleFonts.poppins(color: const Color(0xFFB5C7F7)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationOption(String title, bool isEnabled) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          Switch(
+            value: isEnabled,
+            onChanged: (value) {
+              // Handle notification toggle
+            },
+            activeColor: const Color(0xFFB5C7F7),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEcoProfile() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Eco Profile',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    _buildProfileMetric('Total Carbon Saved', '${_carbonSaved.toStringAsFixed(1)} kg'),
+                    _buildProfileMetric('Eco Points', '$_ecoPoints'),
+                    _buildProfileMetric('Current Streak', '$_streakDays days'),
+                    _buildProfileMetric('Total Orders', '0'),
+                    _buildProfileMetric('Wishlist Items', '${_wishlist.length}'),
+                    _buildProfileMetric('Challenges Completed', '2'),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileMetric(String title, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFFB5C7F7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showHelpSupport() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Help & Support',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    _buildHelpOption('FAQ', Icons.question_answer_rounded),
+                    _buildHelpOption('Contact Support', Icons.support_agent_rounded),
+                    _buildHelpOption('Report Issue', Icons.bug_report_rounded),
+                    _buildHelpOption('Privacy Policy', Icons.privacy_tip_rounded),
+                    _buildHelpOption('Terms of Service', Icons.description_rounded),
+                    _buildHelpOption('About EcoBazaarX', Icons.info_rounded),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHelpOption(String title, IconData icon) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: _buildSettingsCard(
+        title,
+        'Tap to view $title',
+        icon,
+        const Color(0xFFD6EAF8),
+        () => _showSnackBar('$title feature coming soon!'),
+      ),
+    );
+  }
+
+  void _addToWishlistCart(Map<String, dynamic> item) {
+    // Extract price from string (remove ₹ symbol)
+    String priceString = item['price'].toString().replaceAll('₹', '').replaceAll(',', '');
+    double price = double.tryParse(priceString) ?? 0.0;
+    
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    cartProvider.addItem(
+      productId: item['name'],
+      name: item['name'],
+      description: 'Eco-friendly ${item['name'].toLowerCase()}',
+      price: price,
+      icon: item['icon'],
+      color: item['color'],
+    );
+    
+    setState(() {
+      _wishlist.remove(item);
+    });
+    
+    _showSnackBar('${item['name']} added to cart!');
+  }
 }
 
-// Animated Stat Card Widget
+// Animated Stat Card Widget - Updated to match pastel chip style
 class _AnimatedStatCard extends StatefulWidget {
   final String title;
   final String value;
@@ -2378,25 +3435,17 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _pulseAnimation;
+  bool _isHovered = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
     _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.elasticOut,
-    ));
-
-    _pulseAnimation = Tween<double>(
       begin: 1.0,
       end: 1.05,
     ).animate(CurvedAnimation(
@@ -2404,17 +3453,9 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
       curve: Curves.easeInOut,
     ));
 
-    _controller.forward();
-    
-    // Start pulsing animation
-    Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted) {
+    // Only animate once on init for a subtle entrance effect
         _controller.forward().then((_) {
           _controller.reverse();
-        });
-      } else {
-        timer.cancel();
-      }
     });
   }
 
@@ -2430,70 +3471,62 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard>
       animation: _controller,
       builder: (context, child) {
         return Transform.scale(
-          scale: _scaleAnimation.value * _pulseAnimation.value,
+          scale: _scaleAnimation.value,
           child: GestureDetector(
             onTap: widget.onTap,
-            child: Container(
-              padding: const EdgeInsets.all(20),
+            onTapDown: (_) {
+              setState(() => _isHovered = true);
+              _controller.forward();
+            },
+            onTapUp: (_) {
+              setState(() => _isHovered = false);
+              _controller.reverse();
+            },
+            onTapCancel: () {
+              setState(() => _isHovered = false);
+              _controller.reverse();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                color: widget.color,
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.color.withOpacity(0.2),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
+                    color: Colors.grey.withOpacity(_isHovered ? 0.15 : 0.08),
+                    blurRadius: _isHovered ? 20 : 16,
+                    offset: Offset(0, _isHovered ? 10 : 8),
                   ),
                 ],
-                border: Border.all(
-                  color: widget.color.withOpacity(0.3),
-                  width: 1,
-                ),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: widget.color.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Icon(
+                  Icon(
                           widget.icon,
-                          color: widget.color,
+                    color: const Color(0xFF22223B),
                           size: 28,
                         ),
-                      ),
-                      if (widget.onTap != null)
-                        Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: widget.color.withOpacity(0.7),
-                          size: 16,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   Text(
                     widget.value,
                     style: GoogleFonts.poppins(
-                      fontSize: 24,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: widget.color,
+                      color: const Color(0xFF22223B),
                     ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     widget.title,
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey[600],
+                      fontSize: 12,
+                      color: const Color(0xFF22223B).withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -2540,8 +3573,8 @@ class _EnhancedShoppingCardState extends State<_EnhancedShoppingCard>
       curve: Curves.easeInOut,
     ));
 
-    // Update deal count every few seconds
-    _dealTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+    // Update deal count less frequently to improve performance
+    _dealTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
       if (mounted) {
         setState(() {
           _dealCount = 20 + Random().nextInt(30);

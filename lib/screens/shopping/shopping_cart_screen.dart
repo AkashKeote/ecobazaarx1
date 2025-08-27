@@ -18,6 +18,50 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Orders data
+  List<Map<String, dynamic>> _orders = [
+    {
+      'id': 'ORD001',
+      'product': 'Bamboo Water Bottle',
+      'status': 'Delivered',
+      'date': '2024-01-15',
+      'amount': '₹599',
+      'color': const Color(0xFFD6EAF8),
+    },
+    {
+      'id': 'ORD002',
+      'product': 'Organic Cotton T-Shirt',
+      'status': 'In Transit',
+      'date': '2024-01-14',
+      'amount': '₹899',
+      'color': const Color(0xFFB5C7F7),
+    },
+    {
+      'id': 'ORD003',
+      'product': 'Eco-Friendly Soap',
+      'status': 'Processing',
+      'date': '2024-01-13',
+      'amount': '₹199',
+      'color': const Color(0xFFF9E79F),
+    },
+    {
+      'id': 'ORD004',
+      'product': 'Solar Phone Charger',
+      'status': 'Delivered',
+      'date': '2024-01-12',
+      'amount': '₹1299',
+      'color': const Color(0xFFE8D5C4),
+    },
+    {
+      'id': 'ORD005',
+      'product': 'Reusable Shopping Bag',
+      'status': 'In Transit',
+      'date': '2024-01-11',
+      'amount': '₹299',
+      'color': const Color(0xFFB5C7F7),
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -136,6 +180,49 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
                         ],
                       ),
                     ),
+
+                    // Your Orders Section
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Your Orders',
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF22223B),
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () => _showAllOrders(),
+                            child: Text(
+                              'View All',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFFB5C7F7),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _orders.length,
+                        itemBuilder: (context, index) {
+                          final order = _orders[index];
+                          return _buildOrderCard(order);
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
 
                     // Cart Items
                     Expanded(
@@ -515,5 +602,260 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
         ],
       ),
     );
+  }
+
+  void _showAllOrders() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'All Orders',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _orders.length,
+                itemBuilder: (context, index) {
+                  final order = _orders[index];
+                  return _buildOrderListTile(order);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderCard(Map<String, dynamic> order) {
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: order['color'].withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  Icons.shopping_bag_rounded,
+                  color: order['color'],
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      order['id'],
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    Text(
+                      order['product'],
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF22223B),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                order['amount'],
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: order['color'],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(order['status']).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  order['status'],
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: _getStatusColor(order['status']),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderListTile(Map<String, dynamic> order) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: order['color'].withOpacity(0.2),
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: Icon(
+              Icons.shopping_bag_rounded,
+              color: order['color'],
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  order['product'],
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                Text(
+                  'Order ID: ${order['id']} • ${order['date']}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                order['amount'],
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: order['color'],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(order['status']).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  order['status'],
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: _getStatusColor(order['status']),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return Colors.green;
+      case 'in transit':
+        return const Color(0xFFB5C7F7);
+      case 'processing':
+        return const Color(0xFFF9E79F);
+      default:
+        return Colors.grey;
+    }
   }
 }

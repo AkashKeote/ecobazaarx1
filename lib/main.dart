@@ -7,8 +7,14 @@ import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/shopkeeper/shopkeeper_dashboard_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
+import 'services/firebase_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await FirebaseService.initializeFirebase();
+  
   runApp(const EcoBazaarXApp());
 }
 
