@@ -69,6 +69,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         price: widget.product['price'].toDouble(),
         icon: widget.product['icon'],
         color: widget.product['color'],
+        category: widget.product['category'],
+        carbonFootprint: widget.product['carbonFootprint'].toDouble(),
       );
     }
 

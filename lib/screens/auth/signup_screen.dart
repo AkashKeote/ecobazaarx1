@@ -1,3 +1,4 @@
+import 'package:ecobazaarx/screens/auth/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -137,8 +138,9 @@ class _SignupScreenState extends State<SignupScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F2),
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -510,9 +512,19 @@ class _SignupScreenState extends State<SignupScreen>
                           const SizedBox(height: 24),
 
                           // Signup Button
-                          SizedBox(
+                          Container(
                             width: double.infinity,
                             height: 56,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFF9E79F).withOpacity(0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _handleSignup,
                               style: ElevatedButton.styleFrom(
@@ -566,12 +578,12 @@ class _SignupScreenState extends State<SignupScreen>
                             ),
                             GestureDetector(
                               onTap: () {
-                                Navigator.pop(context);
+                                Navigator.push(context, MaterialPageRoute(builder: (context) => LoginScreen()));
                               },
                               child: Text(
                                 'Sign In',
                                 style: GoogleFonts.poppins(
-                                  color: const Color(0xFFF9E79F),
+                                  color: const Color.fromARGB(255, 19, 15, 0),
                                   fontWeight: FontWeight.w600,
                                   decoration: TextDecoration.underline,
                                 ),
@@ -582,7 +594,7 @@ class _SignupScreenState extends State<SignupScreen>
                       ),
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 60),
                   ],
                 ),
               ),

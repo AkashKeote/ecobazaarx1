@@ -309,6 +309,35 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.eco_rounded,
+                                      size: 16,
+                                      color: Colors.green[600],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Carbon Saved',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.green[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  '${cartProvider.totalCarbonFootprintSaved.toStringAsFixed(1)} kg CO₂',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green[600],
+                                  ),
+                                ),
+                              ],
+                            ),
                             const Divider(height: 24),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -577,6 +606,8 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
                               price: item.price,
                               icon: item.icon,
                               color: item.color,
+                              category: item.category,
+                              carbonFootprint: item.carbonFootprint,
                             );
                           },
                           icon: Container(
@@ -593,6 +624,25 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
                           ),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.eco_rounded,
+                      size: 14,
+                      color: Colors.green[600],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${item.totalCarbonFootprint.toStringAsFixed(1)} kg CO₂ saved',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.green[600],
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),

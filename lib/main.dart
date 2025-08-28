@@ -7,6 +7,8 @@ import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/shopkeeper/shopkeeper_dashboard_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
+import 'providers/carbon_tracking_provider.dart';
+import 'providers/store_provider.dart';
 
 void main() {
   runApp(const EcoBazaarXApp());
@@ -21,6 +23,8 @@ class EcoBazaarXApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => CarbonTrackingProvider()),
+        ChangeNotifierProvider(create: (_) => StoreProvider()),
       ],
       child: MaterialApp(
         title: 'EcoBazaarX',

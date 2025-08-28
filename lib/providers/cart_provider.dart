@@ -8,6 +8,8 @@ class CartItem {
   int quantity;
   final IconData icon;
   final Color color;
+  final String category; // Add category for carbon calculation
+  final double carbonFootprint; // Add carbon footprint per unit
 
   CartItem({
     required this.id,
@@ -17,9 +19,12 @@ class CartItem {
     required this.quantity,
     required this.icon,
     required this.color,
+    required this.category,
+    required this.carbonFootprint,
   });
 
   double get totalPrice => price * quantity;
+  double get totalCarbonFootprint => carbonFootprint * quantity;
 }
 
 class CartProvider with ChangeNotifier {
@@ -47,6 +52,28 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
+  // Calculate total carbon footprint saved
+  double get totalCarbonFootprintSaved {
+    double total = 0.0;
+    _cartItems.forEach((key, cartItem) {
+      total += cartItem.totalCarbonFootprint;
+    });
+    return total;
+  }
+
+  // Get carbon footprint by category
+  Map<String, double> get carbonFootprintByCategory {
+    Map<String, double> categoryCarbon = {};
+    _cartItems.forEach((key, cartItem) {
+      if (categoryCarbon.containsKey(cartItem.category)) {
+        categoryCarbon[cartItem.category] = categoryCarbon[cartItem.category]! + cartItem.totalCarbonFootprint;
+      } else {
+        categoryCarbon[cartItem.category] = cartItem.totalCarbonFootprint;
+      }
+    });
+    return categoryCarbon;
+  }
+
   void addItem({
     required String productId,
     required String name,
@@ -54,6 +81,8 @@ class CartProvider with ChangeNotifier {
     required double price,
     required IconData icon,
     required Color color,
+    required String category,
+    required double carbonFootprint,
   }) {
     if (_cartItems.containsKey(productId)) {
       // If item already exists, increase quantity
@@ -67,6 +96,8 @@ class CartProvider with ChangeNotifier {
           quantity: existingCartItem.quantity + 1,
           icon: existingCartItem.icon,
           color: existingCartItem.color,
+          category: existingCartItem.category,
+          carbonFootprint: existingCartItem.carbonFootprint,
         ),
       );
     } else {
@@ -81,6 +112,8 @@ class CartProvider with ChangeNotifier {
           quantity: 1,
           icon: icon,
           color: color,
+          category: category,
+          carbonFootprint: carbonFootprint,
         ),
       );
     }
@@ -108,6 +141,8 @@ class CartProvider with ChangeNotifier {
           quantity: existingCartItem.quantity - 1,
           icon: existingCartItem.icon,
           color: existingCartItem.color,
+          category: existingCartItem.category,
+          carbonFootprint: existingCartItem.carbonFootprint,
         ),
       );
     } else {
@@ -131,6 +166,8 @@ class CartProvider with ChangeNotifier {
         quantity: newQuantity,
         icon: existingCartItem.icon,
         color: existingCartItem.color,
+        category: existingCartItem.category,
+        carbonFootprint: existingCartItem.carbonFootprint,
       ),
     );
     notifyListeners();
@@ -150,5 +187,26 @@ class CartProvider with ChangeNotifier {
       return _cartItems[productId]!.quantity;
     }
     return 0;
+  }
+
+  // Get purchase summary for carbon tracking
+  Map<String, dynamic> getPurchaseSummary() {
+    return {
+      'totalAmount': totalAmount,
+      'totalQuantity': totalQuantity,
+      'totalCarbonSaved': totalCarbonFootprintSaved,
+      'carbonByCategory': carbonFootprintByCategory,
+      'items': cartItemsList.map((item) => {
+        'id': item.id,
+        'name': item.name,
+        'quantity': item.quantity,
+        'price': item.price,
+        'totalPrice': item.totalPrice,
+        'category': item.category,
+        'carbonFootprint': item.carbonFootprint,
+        'totalCarbonSaved': item.totalCarbonFootprint,
+      }).toList(),
+      'timestamp': DateTime.now().toIso8601String(),
+    };
   }
 }

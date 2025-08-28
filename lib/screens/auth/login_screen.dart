@@ -124,8 +124,9 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F2),
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -362,9 +363,19 @@ class _LoginScreenState extends State<LoginScreen>
                           const SizedBox(height: 24),
 
                           // Login Button
-                          SizedBox(
+                          Container(
                             width: double.infinity,
                             height: 56,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFB5C7F7).withOpacity(0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
@@ -426,7 +437,7 @@ class _LoginScreenState extends State<LoginScreen>
                               child: Text(
                                 'Sign Up',
                                 style: GoogleFonts.poppins(
-                                  color: const Color(0xFFB5C7F7),
+                                  color: const Color.fromARGB(133, 0, 0, 0),
                                   fontWeight: FontWeight.w600,
                                   decoration: TextDecoration.underline,
                                 ),
@@ -437,7 +448,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 60),
                   ],
                 ),
               ),

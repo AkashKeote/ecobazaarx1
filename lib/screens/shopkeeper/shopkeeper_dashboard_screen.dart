@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/store_provider.dart';
 
 class ShopkeeperDashboardScreen extends StatefulWidget {
   const ShopkeeperDashboardScreen({super.key});
@@ -235,6 +236,42 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
                         label: 'View Orders',
                         color: const Color(0xFFD6EAF8),
                         onTap: () => _showOrders(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.storefront_rounded,
+                        label: 'My Store',
+                        color: const Color(0xFFE8D5C4),
+                        onTap: () => _showMyStore(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.edit_rounded,
+                        label: 'Edit Store',
+                        color: const Color(0xFFF9E79F),
+                        onTap: () => _showEditStore(context),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _PastelActionCard(
+                        icon: Icons.add_business_rounded,
+                        label: 'Add Store',
+                        color: const Color(0xFFB5C7F7),
+                        onTap: () => _showAddStore(context),
                       ),
                     ),
                   ],
@@ -1153,6 +1190,571 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
       SnackBar(
         content: Text('Opening Improvement Tips...', style: GoogleFonts.poppins()),
         backgroundColor: const Color(0xFFF9E79F),
+      ),
+    );
+  }
+
+  // Store Management Methods
+  void _showMyStore(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'My Store Details',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    _buildStoreInfoCard(),
+                    const SizedBox(height: 20),
+                    _buildStoreStatsCard(),
+                    const SizedBox(height: 20),
+                    _buildStoreActionsCard(context),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditStore(BuildContext context) {
+    final nameController = TextEditingController(text: 'My Eco Store');
+    final descriptionController = TextEditingController(text: 'A sustainable store offering eco-friendly products');
+    String selectedCategory = 'Food & Beverages';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit Store Details', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Store Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                border: OutlineInputBorder(),
+              ),
+              value: selectedCategory,
+              items: const [
+                DropdownMenuItem(value: 'Food & Beverages', child: Text('Food & Beverages')),
+                DropdownMenuItem(value: 'Clothing & Fashion', child: Text('Clothing & Fashion')),
+                DropdownMenuItem(value: 'Electronics', child: Text('Electronics')),
+                DropdownMenuItem(value: 'Home & Garden', child: Text('Home & Garden')),
+                DropdownMenuItem(value: 'Personal Care', child: Text('Personal Care')),
+              ],
+              onChanged: (value) {
+                selectedCategory = value!;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Store Description',
+                border: OutlineInputBorder(),
+                hintText: 'Tell customers about your store...',
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Find the shopkeeper's store to update
+              final shopkeeperStores = StoreProvider.getStoresByOwner('shopkeeper');
+              if (shopkeeperStores.isNotEmpty) {
+                final storeToUpdate = shopkeeperStores.first;
+                StoreProvider.updateStore(storeToUpdate['id'], {
+                  'name': nameController.text,
+                  'category': selectedCategory,
+                  'description': descriptionController.text,
+                });
+              }
+              
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Store details updated successfully!', style: GoogleFonts.poppins()),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddStore(BuildContext context) {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    String selectedCategory = 'Food & Beverages';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add New Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Store Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                border: OutlineInputBorder(),
+              ),
+              value: selectedCategory,
+              items: const [
+                DropdownMenuItem(value: 'Food & Beverages', child: Text('Food & Beverages')),
+                DropdownMenuItem(value: 'Clothing & Fashion', child: Text('Clothing & Fashion')),
+                DropdownMenuItem(value: 'Electronics', child: Text('Electronics')),
+                DropdownMenuItem(value: 'Home & Garden', child: Text('Home & Garden')),
+                DropdownMenuItem(value: 'Personal Care', child: Text('Personal Care')),
+              ],
+              onChanged: (value) {
+                selectedCategory = value!;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Store Description',
+                border: OutlineInputBorder(),
+                hintText: 'Tell customers about your store...',
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                final newStore = {
+                  'name': nameController.text,
+                  'category': selectedCategory,
+                  'status': 'Active',
+                  'ownerId': 'shopkeeper', // Shopkeeper created store
+                  'description': descriptionController.text.isNotEmpty ? descriptionController.text : 'A new store added by shopkeeper.',
+                };
+                
+                StoreProvider.addStore(newStore);
+                
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Store "${nameController.text}" added successfully!', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Please enter store name!', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Add Store'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStoreInfoCard() {
+    // Get shopkeeper's stores
+    final shopkeeperStores = StoreProvider.getStoresByOwner('shopkeeper');
+    final store = shopkeeperStores.isNotEmpty ? shopkeeperStores.first : null;
+    
+    if (store == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.store_rounded,
+              size: 48,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Store Found',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF22223B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You haven\'t created any stores yet. Use "Add Store" to create your first store!',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFFB5C7F7),
+                child: Text(
+                  store['name'][0].toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFF22223B),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      store['name'],
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    Text(
+                      store['category'],
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: store['status'] == 'Active' ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  store['status'],
+                  style: TextStyle(
+                    color: store['status'] == 'Active' ? Colors.green : Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            store['description'] ?? 'A sustainable store offering eco-friendly products.',
+            style: GoogleFonts.poppins(
+              color: Colors.grey[700],
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStoreStatsCard() {
+    // Get shopkeeper's stores
+    final shopkeeperStores = StoreProvider.getStoresByOwner('shopkeeper');
+    final store = shopkeeperStores.isNotEmpty ? shopkeeperStores.first : null;
+    
+    if (store == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              'Store Statistics',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF22223B),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No store data available',
+              style: GoogleFonts.poppins(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Store Statistics',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem('Products', '${store['products']}', Icons.inventory_rounded, const Color(0xFFB5C7F7)),
+              ),
+              Expanded(
+                child: _buildStatItem('Orders', '${store['ordersToday']}', Icons.shopping_cart_rounded, const Color(0xFFF9E79F)),
+              ),
+              Expanded(
+                child: _buildStatItem('Revenue', '₹${(store['revenue'] / 1000).toStringAsFixed(1)}K', Icons.currency_rupee_rounded, const Color(0xFFD6EAF8)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStoreActionsCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick Actions',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  'Edit Store',
+                  Icons.edit_rounded,
+                  const Color(0xFFB5C7F7),
+                  () => _showEditStore(context),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionButton(
+                  'Add Product',
+                  Icons.add_box_rounded,
+                  const Color(0xFFF9E79F),
+                  () => _showAddProduct(context),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF22223B),
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color, width: 1),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF22223B),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

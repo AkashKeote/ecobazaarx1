@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/carbon_tracking_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class PaymentSuccessScreen extends StatefulWidget {
   final String orderId;
@@ -46,6 +50,11 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
 
     _fadeController.forward();
     _bounceController.forward();
+    
+    // Record the purchase in carbon tracking
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _recordPurchase();
+    });
   }
 
   @override
@@ -256,51 +265,56 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                     const SizedBox(height: 40),
 
                     // Environmental Impact
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8D5C4).withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: const Color(0xFFE8D5C4),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.eco_rounded,
-                              color: const Color(0xFF22223B),
-                              size: 32,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Carbon Footprint Saved',
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF22223B),
-                                    ),
-                                  ),
-                                  Text(
-                                    'Your eco-friendly purchase saved 1.2kg CO₂',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
+                    Consumer<CartProvider>(
+                      builder: (context, cartProvider, child) {
+                        final carbonSaved = cartProvider.totalCarbonFootprintSaved;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8D5C4).withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: const Color(0xFFE8D5C4),
+                                width: 1,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.eco_rounded,
+                                  color: const Color(0xFF22223B),
+                                  size: 32,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Carbon Footprint Saved',
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF22223B),
+                                        ),
+                                      ),
+                                      Text(
+                                        'Your eco-friendly purchase saved ${carbonSaved.toStringAsFixed(1)}kg CO₂',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -399,5 +413,29 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
         ),
       ),
     );
+  }
+
+  void _recordPurchase() {
+    try {
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final carbonProvider = Provider.of<CarbonTrackingProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      if (cartProvider.cartItemsList.isNotEmpty) {
+        final cartSummary = cartProvider.getPurchaseSummary();
+        
+        carbonProvider.addPurchaseFromCart(
+          orderId: widget.orderId,
+          customerId: authProvider.userEmail ?? 'CUST001',
+          customerName: authProvider.userName ?? 'Customer',
+          cartSummary: cartSummary,
+        );
+
+        // Clear the cart after successful purchase
+        cartProvider.clearCart();
+      }
+    } catch (e) {
+      print('Error recording purchase: $e');
+    }
   }
 }

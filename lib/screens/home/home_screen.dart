@@ -2481,6 +2481,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     String priceString = product['price'].toString().replaceAll('₹', '').replaceAll(',', '');
     double price = double.tryParse(priceString) ?? 0.0;
     
+    // Determine category based on product name or icon
+    String category = _getProductCategory(product);
+    
+    // Calculate carbon footprint based on product type
+    double carbonFootprint = _getProductCarbonFootprint(product);
+    
     cartProvider.addItem(
       productId: product['id'] ?? product['name'],
       name: product['name'],
@@ -2488,6 +2494,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       price: price,
       icon: product['icon'],
       color: product['color'],
+      category: category,
+      carbonFootprint: carbonFootprint,
     );
   }
 
@@ -3393,6 +3401,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     String priceString = item['price'].toString().replaceAll('₹', '').replaceAll(',', '');
     double price = double.tryParse(priceString) ?? 0.0;
     
+    // Determine category based on product name or icon
+    String category = _getProductCategory(item);
+    
+    // Calculate carbon footprint based on product type
+    double carbonFootprint = _getProductCarbonFootprint(item);
+    
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     cartProvider.addItem(
       productId: item['name'],
@@ -3401,6 +3415,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       price: price,
       icon: item['icon'],
       color: item['color'],
+      category: category,
+      carbonFootprint: carbonFootprint,
     );
     
     setState(() {
@@ -3408,6 +3424,62 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
     
     _showSnackBar('${item['name']} added to cart!');
+  }
+
+  // Helper method to determine product category
+  String _getProductCategory(Map<String, dynamic> product) {
+    String name = product['name'].toString().toLowerCase();
+    IconData icon = product['icon'];
+    
+    if (name.contains('cotton') || name.contains('tshirt') || name.contains('clothing') || 
+        icon == Icons.checkroom_rounded) {
+      return 'Clothing';
+    } else if (name.contains('bamboo') || name.contains('water') || name.contains('bottle') || 
+               icon == Icons.water_drop_rounded) {
+      return 'Home & Garden';
+    } else if (name.contains('bag') || name.contains('shopping') || 
+               icon == Icons.shopping_bag_rounded) {
+      return 'Accessories';
+    } else if (name.contains('soap') || name.contains('personal') || 
+               icon == Icons.soap_rounded) {
+      return 'Personal Care';
+    } else if (name.contains('solar') || name.contains('charger') || 
+               icon == Icons.solar_power_rounded) {
+      return 'Electronics';
+    } else if (name.contains('honey') || name.contains('organic') || 
+               icon == Icons.restaurant_rounded) {
+      return 'Food & Beverages';
+    } else {
+      return 'Other';
+    }
+  }
+
+  // Helper method to calculate carbon footprint
+  double _getProductCarbonFootprint(Map<String, dynamic> product) {
+    String name = product['name'].toString().toLowerCase();
+    IconData icon = product['icon'];
+    
+    if (name.contains('cotton') || name.contains('tshirt') || name.contains('clothing') || 
+        icon == Icons.checkroom_rounded) {
+      return 2.5; // kg CO2 saved per clothing item
+    } else if (name.contains('bamboo') || name.contains('water') || name.contains('bottle') || 
+               icon == Icons.water_drop_rounded) {
+      return 1.8; // kg CO2 saved per reusable bottle
+    } else if (name.contains('bag') || name.contains('shopping') || 
+               icon == Icons.shopping_bag_rounded) {
+      return 1.2; // kg CO2 saved per reusable bag
+    } else if (name.contains('soap') || name.contains('personal') || 
+               icon == Icons.soap_rounded) {
+      return 0.8; // kg CO2 saved per eco soap
+    } else if (name.contains('solar') || name.contains('charger') || 
+               icon == Icons.solar_power_rounded) {
+      return 3.5; // kg CO2 saved per solar charger
+    } else if (name.contains('honey') || name.contains('organic') || 
+               icon == Icons.restaurant_rounded) {
+      return 1.5; // kg CO2 saved per organic food item
+    } else {
+      return 1.0; // Default carbon footprint
+    }
   }
 }
 
