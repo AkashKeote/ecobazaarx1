@@ -1,78 +1,139 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/firebase_service.dart';
+import '../config/firebase_config.dart';
 
-enum UserRole { customer, shopkeeper, admin }
+// Import UserRole from FirebaseService
+import '../services/firebase_service.dart' show UserRole;
 
 class AuthProvider extends ChangeNotifier {
+  final FirebaseService _firebaseService = FirebaseService();
+  
   bool _isAuthenticated = false;
   String? _userEmail;
   String? _userName;
   UserRole? _userRole;
-
-  // Static list to store all registered users (accessible by admin)
-  static List<Map<String, dynamic>> _allUsers = [
-    // Default admin user
-    {
-      'id': 'admin_1',
-      'name': 'Admin User',
-      'email': 'admin@ecobazaar.com',
-      'role': UserRole.admin,
-      'status': 'Active',
-      'joinDate': DateTime.now().subtract(const Duration(days: 30)).toIso8601String().split('T')[0],
-    },
-  ];
+  String? _userId;
+  Map<String, dynamic>? _userData;
 
   bool get isAuthenticated => _isAuthenticated;
   String? get userEmail => _userEmail;
   String? get userName => _userName;
   UserRole? get userRole => _userRole;
-  
-  // Getter for all users (for admin access)
-  static List<Map<String, dynamic>> get allUsers => _allUsers;
+  String? get userId => _userId;
+  Map<String, dynamic>? get userData => _userData;
 
   AuthProvider() {
-    _checkAuthStatus();
+    _initializeAuth();
   }
 
-  Future<void> _checkAuthStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isAuthenticated = prefs.getBool('isAuthenticated') ?? false;
-    _userEmail = prefs.getString('userEmail');
-    _userName = prefs.getString('userName');
+  Future<void> _initializeAuth() async {
+    // Listen to Firebase auth state changes
+    _firebaseService.authStateChanges.listen((dynamic user) async {
+      if (user != null && user.uid != null) {
+        await _loadUserData(user.uid);
+      } else {
+        await _clearUserData();
+      }
+    });
 
-    final roleString = prefs.getString('userRole');
-    if (roleString != null) {
-      _userRole = UserRole.values.firstWhere(
-        (role) => role.toString() == roleString,
-        orElse: () => UserRole.customer,
-      );
+    // Check if user is already signed in
+    final currentUser = _firebaseService.currentUser;
+    if (currentUser != null) {
+      await _loadUserData(currentUser.uid);
     }
+  }
+
+  Future<void> _loadUserData(String uid) async {
+    try {
+      final userData = await _firebaseService.getUserData(uid);
+      if (userData != null) {
+        _userId = uid;
+        _userEmail = userData['email'];
+        _userName = userData['name'];
+        _userRole = _parseUserRole(userData['role']);
+        _userData = userData;
+        _isAuthenticated = true;
+
+        // Save to local storage for offline access
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isAuthenticated', true);
+        await prefs.setString('userEmail', _userEmail!);
+        await prefs.setString('userName', _userName!);
+        await prefs.setString('userRole', _userRole.toString());
+        await prefs.setString('userId', uid);
+
+        notifyListeners();
+      }
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
+      print('Error loading user data: $e');
+    }
+  }
+
+  Future<void> _clearUserData() async {
+    _isAuthenticated = false;
+    _userEmail = null;
+    _userName = null;
+    _userRole = null;
+    _userId = null;
+    _userData = null;
+
+    // Clear local storage
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
 
     notifyListeners();
   }
 
-  Future<bool> login(String email, String password, UserRole role) async {
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
-
-    // For demo purposes, accept any email/password combination
-    if (email.isNotEmpty && password.isNotEmpty) {
-      _isAuthenticated = true;
-      _userEmail = email;
-      _userName = email.split('@')[0]; // Use email prefix as username
-      _userRole = role;
-
-      // Save to local storage
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isAuthenticated', true);
-      await prefs.setString('userEmail', email);
-      await prefs.setString('userName', _userName!);
-      await prefs.setString('userRole', role.toString());
-
-      notifyListeners();
-      return true;
+  UserRole _parseUserRole(String roleString) {
+    switch (roleString) {
+      case 'UserRole.customer':
+        return UserRole.customer;
+      case 'UserRole.shopkeeper':
+        return UserRole.shopkeeper;
+      case 'UserRole.admin':
+        return UserRole.admin;
+      default:
+        return UserRole.customer;
     }
-    return false;
+  }
+
+  Future<bool> login(String email, String password, UserRole role) async {
+    try {
+      // Validate email format
+      if (!_firebaseService.validateEmail(email)) {
+        throw FirebaseConfig.validationRules['email']['message'];
+      }
+
+      // Validate password
+      if (!_firebaseService.validatePassword(password)) {
+        throw FirebaseConfig.validationRules['password']['message'];
+      }
+
+      // Sign in with Firebase
+      final credential = await _firebaseService.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential != null && credential.user != null) {
+        // Load user data from Firestore
+        await _loadUserData(credential.user!.uid);
+        
+        // Verify user role matches
+        if (_userRole != role) {
+          await logout();
+          throw 'Invalid role selected for this account.';
+        }
+
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
+      rethrow;
+    }
   }
 
   Future<bool> signup(
@@ -82,60 +143,90 @@ class AuthProvider extends ChangeNotifier {
     String confirmPassword,
     UserRole role,
   ) async {
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 1));
-
-    // For demo purposes, accept any valid input
-    if (name.isNotEmpty &&
-        email.isNotEmpty &&
-        password.isNotEmpty &&
-        password == confirmPassword) {
-      
-      // Check if user already exists
-      if (_allUsers.any((user) => user['email'] == email)) {
-        return false; // User already exists
+    try {
+      // Validate inputs
+      if (!_firebaseService.validateName(name)) {
+        throw FirebaseConfig.validationRules['name']['message'];
       }
 
-      // Add new user to the static list
-      final newUser = {
-        'id': 'user_${_allUsers.length + 1}',
-        'name': name,
-        'email': email,
-        'role': role,
-        'status': 'Active',
-        'joinDate': DateTime.now().toIso8601String().split('T')[0],
-      };
-      _allUsers.add(newUser);
+      if (!_firebaseService.validateEmail(email)) {
+        throw FirebaseConfig.validationRules['email']['message'];
+      }
 
-      _isAuthenticated = true;
-      _userEmail = email;
-      _userName = name;
-      _userRole = role;
+      if (!_firebaseService.validatePassword(password)) {
+        throw FirebaseConfig.validationRules['password']['message'];
+      }
 
-      // Save to local storage
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isAuthenticated', true);
-      await prefs.setString('userEmail', email);
-      await prefs.setString('userName', name);
-      await prefs.setString('userRole', role.toString());
+      if (password != confirmPassword) {
+        throw 'Passwords do not match';
+      }
 
-      notifyListeners();
-      return true;
+      // Create user with Firebase
+      final credential = await _firebaseService.signUpWithEmailAndPassword(
+        email: email,
+        password: password,
+        name: name,
+        role: role,
+      );
+
+      if (credential != null && credential.user != null) {
+        // Load user data from Firestore
+        await _loadUserData(credential.user!.uid);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
+      rethrow;
     }
-    return false;
   }
 
   Future<void> logout() async {
-    _isAuthenticated = false;
-    _userEmail = null;
-    _userName = null;
-    _userRole = null;
+    try {
+      await _firebaseService.signOut();
+      await _clearUserData();
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
+      rethrow;
+    }
+  }
 
-    // Clear local storage
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+  Future<void> resetPassword(String email) async {
+    try {
+      if (!_firebaseService.validateEmail(email)) {
+        throw FirebaseConfig.validationRules['email']['message'];
+      }
 
-    notifyListeners();
+      await _firebaseService.resetPassword(email);
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
+      rethrow;
+    }
+  }
+
+  Future<void> updateUserProfile(Map<String, dynamic> data) async {
+    try {
+      if (_userId != null) {
+        await _firebaseService.updateUserData(_userId!, data);
+        
+        // Update local data
+        if (data.containsKey('name')) {
+          _userName = data['name'];
+        }
+        _userData = {...?_userData, ...data};
+
+        // Update local storage
+        final prefs = await SharedPreferences.getInstance();
+        if (data.containsKey('name')) {
+          await prefs.setString('userName', _userName!);
+        }
+
+        notifyListeners();
+      }
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
+      rethrow;
+    }
   }
 
   String getRoleDisplayName(UserRole role) {
@@ -160,17 +251,40 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Method to get users filtered by role (for admin dashboard)
-  static List<Map<String, dynamic>> getUsersByRole(UserRole? role) {
-    if (role == null) return _allUsers;
-    return _allUsers.where((user) => user['role'] == role).toList();
+  // Admin methods for user management
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    try {
+      return await _firebaseService.getAllUsers();
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
+      rethrow;
+    }
   }
 
-  // Method to update user status (for admin dashboard)
-  static void updateUserStatus(String userId, String status) {
-    final userIndex = _allUsers.indexWhere((user) => user['id'] == userId);
-    if (userIndex != -1) {
-      _allUsers[userIndex]['status'] = status;
+  Future<List<Map<String, dynamic>>> getUsersByRole(UserRole role) async {
+    try {
+      return await _firebaseService.getUsersByRole(role);
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
+      rethrow;
+    }
+  }
+
+  Future<void> updateUserStatus(String userId, String status) async {
+    try {
+      await _firebaseService.updateUserStatus(userId, status);
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
+      rethrow;
+    }
+  }
+
+  // Analytics methods
+  Future<void> logEvent(String eventName, {Map<String, dynamic>? parameters}) async {
+    try {
+      await _firebaseService.logEvent(eventName, parameters: parameters);
+    } catch (e) {
+      _firebaseService.reportError(e, StackTrace.current);
     }
   }
 }

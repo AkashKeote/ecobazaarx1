@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/home/home_screen.dart';
@@ -15,8 +16,28 @@ import 'providers/wishlist_provider.dart';
 import 'providers/product_view_provider.dart';
 import 'providers/eco_challenges_provider.dart';
 import 'providers/settings_provider.dart';
+import 'services/firebase_service.dart';
+import 'config/firebase_config.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: 'AIzaSyBDFe6o3M18xli1ssoNE2db_8luRpF8wCk',
+      authDomain: 'ecobazzarx.firebaseapp.com',
+      projectId: 'ecobazzarx',
+      storageBucket: 'ecobazzarx.firebasestorage.app',
+      messagingSenderId: '321134139960',
+      appId: '1:321134139960:web:8e7f3c2dd23ba98a32a4cd',
+      measurementId: 'G-0TYKMV0NS9',
+    ),
+  );
+
+  // Initialize Firebase services
+  await FirebaseService().initialize();
+  
   runApp(const EcoBazaarXApp());
 }
 

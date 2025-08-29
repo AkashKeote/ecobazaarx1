@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart' show UserRole;
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});

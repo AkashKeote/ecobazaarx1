@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart' show UserRole;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -91,10 +92,30 @@ class _LoginScreenState extends State<LoginScreen>
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = 'An error occurred during login.';
+        
+        // Handle specific Firebase auth errors
+        if (e.toString().contains('user-not-found')) {
+          errorMessage = 'No account found with this email address.';
+        } else if (e.toString().contains('wrong-password')) {
+          errorMessage = 'Incorrect password. Please try again.';
+        } else if (e.toString().contains('invalid-email')) {
+          errorMessage = 'Please enter a valid email address.';
+        } else if (e.toString().contains('too-many-requests')) {
+          errorMessage = 'Too many failed attempts. Please try again later.';
+        } else if (e.toString().contains('network-request-failed')) {
+          errorMessage = 'Network error. Please check your connection.';
+        } else if (e.toString().contains('Invalid role')) {
+          errorMessage = 'Invalid role selected for this account.';
+        } else {
+          errorMessage = e.toString();
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
