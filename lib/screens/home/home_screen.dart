@@ -5,6 +5,11 @@ import 'dart:async';
 import 'dart:math';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/wishlist_provider.dart';
+import '../../providers/carbon_tracking_provider.dart';
+import '../../providers/product_view_provider.dart';
+import '../../providers/eco_challenges_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../shopping/shopping_cart_screen.dart';
 import '../shopping/product_catalog_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
@@ -44,47 +49,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _ecoPoints = 1250;
   int _streakDays = 7;
   
-  List<Map<String, dynamic>> _wishlist = [
-    {
-      'name': 'Solar Phone Charger',
-      'price': '₹1299',
-      'color': const Color(0xFFB5C7F7),
-      'icon': Icons.solar_power_rounded,
-    },
-    {
-      'name': 'Reusable Shopping Bag',
-      'price': '₹299',
-      'color': const Color(0xFFE8D5C4),
-      'icon': Icons.shopping_bag_rounded,
-    },
-  ];
+  // Wishlist will be managed by WishlistProvider
   
-  List<Map<String, dynamic>> _ecoChallenges = [
-    {
-      'title': 'Zero Waste Week',
-      'description': 'Go 7 days without producing any waste',
-      'progress': 0.6,
-      'reward': '500 Eco Points',
-      'color': const Color(0xFFB5C7F7),
-      'icon': Icons.recycling_rounded,
-    },
-    {
-      'title': 'Carbon Footprint',
-      'description': 'Reduce your daily carbon footprint by 20%',
-      'progress': 0.8,
-      'reward': '300 Eco Points',
-      'color': const Color(0xFFF9E79F),
-      'icon': Icons.eco_rounded,
-    },
-    {
-      'title': 'Local Shopping',
-      'description': 'Buy from 5 local eco-friendly stores',
-      'progress': 0.4,
-      'reward': '200 Eco Points',
-      'color': const Color(0xFFE8D5C4),
-      'icon': Icons.store_rounded,
-    },
-  ];
+  // Eco challenges will be managed by EcoChallengesProvider
   
   // Live notifications
   List<Map<String, dynamic>> _notifications = [
@@ -254,37 +221,62 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                             ),
                             // Live Notification Bell
-                            Stack(
-                              children: [
-                                IconButton(
-                                  onPressed: () => _showNotifications(),
-                                  icon: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF9E79F),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.notifications_rounded,
-                                      color: Color(0xFF22223B),
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                                if (_notifications.isNotEmpty)
-                                  Positioned(
-                                    right: 8,
-                                    top: 8,
-                                    child: Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
+                            Consumer<SettingsProvider>(
+                              builder: (context, settingsProvider, child) {
+                                if (!settingsProvider.pushNotificationsEnabled) {
+                                  return const SizedBox.shrink(); // Hide notification bell if disabled
+                                }
+                                
+                                return Stack(
+                                  children: [
+                                    IconButton(
+                                      onPressed: () => _showNotifications(),
+                                      icon: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF9E79F),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.notifications_rounded,
+                                          color: Color(0xFF22223B),
+                                          size: 20,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                              ],
+                                    if (_notifications.isNotEmpty)
+                                      Positioned(
+                                        right: 8,
+                                        top: 8,
+                                        child: Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            // Settings Button
+                            IconButton(
+                              onPressed: () => Navigator.pushNamed(context, '/settings'),
+                              icon: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8D5C4),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.settings_rounded,
+                                  color: Color(0xFF22223B),
+                                  size: 20,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 8),
                             IconButton(
@@ -313,50 +305,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        // Live Activity Feed
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8D5C4).withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: const Color(0xFFE8D5C4),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.green,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Live: ${_liveActivities[_activityIndex]}',
-                                  style: GoogleFonts.poppins(
-                                    color: const Color(0xFF22223B),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                _currentWeather,
-                                style: GoogleFonts.poppins(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+
                       ],
                     ),
                   ),
@@ -410,55 +359,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
 
-                  // Real-time Stats Cards
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      children: [
-                        _AnimatedStatCard(
-                          title: 'Carbon Saved',
-                          value: '${_carbonSaved.toStringAsFixed(1)} kg',
-                          color: const Color(0xFFF9E79F),
-                          icon: Icons.eco_rounded,
-                          onTap: _showImpactTracker,
-                        ),
-                        const SizedBox(width: 16),
-                        _AnimatedStatCard(
-                          title: 'Products Viewed',
-                          value: _productsViewed.toString(),
-                          color: const Color(0xFFD6EAF8),
-                          icon: Icons.visibility_rounded,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      children: [
-                        _AnimatedStatCard(
-                          title: 'Today\'s Savings',
-                          value: '₹${_todaysSavings.toStringAsFixed(0)}',
-                          color: const Color(0xFFB5C7F7),
-                          icon: Icons.savings_rounded,
-                        ),
-                        const SizedBox(width: 16),
-                        _AnimatedStatCard(
-                          title: 'Nearby Stores',
-                          value: _nearbyStores.toString(),
-                          color: const Color(0xFFE8D5C4),
-                          icon: Icons.store_rounded,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
 
                   // Live Community Section
                   Padding(
@@ -573,8 +474,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            const Color(0xFFB5C7F7),
-                            const Color(0xFFF9E79F),
+                            const Color(0xFF4CAF50),
+                            const Color(0xFF2E7D32),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -582,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFB5C7F7).withOpacity(0.3),
+                            color: const Color(0xFF4CAF50).withOpacity(0.3),
                             blurRadius: 15,
                             offset: const Offset(0, 8),
                           ),
@@ -615,7 +516,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         'Discover eco-friendly products',
                                         style: GoogleFonts.poppins(
                                           fontSize: 14,
-                                          color: Colors.white.withOpacity(0.9),
+                                          color: Colors.white.withOpacity(0.95),
                                         ),
                                       ),
                                     ],
@@ -625,7 +526,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   width: 60,
                                   height: 60,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withOpacity(0.25),
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                   child: const Icon(
@@ -664,8 +565,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     child: Row(
                       children: [
                         Expanded(
-                          child: _EnhancedShoppingCard(
-                            onTap: () => _navigateToShopping(),
+                          child: Consumer<CarbonTrackingProvider>(
+                            builder: (context, carbonProvider, child) {
+                              return _PastelActionCard(
+                                icon: Icons.eco_rounded,
+                                label: 'Carbon Saved',
+                                color: const Color(0xFFF9E79F),
+                                onTap: () => _showCarbonSavedDetails(carbonProvider),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -708,19 +616,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const SizedBox(width: 16),
                         Expanded(
                           child: _PastelActionCard(
-                            icon: Icons.notifications_active_rounded,
-                            label: 'Notifications',
+                            icon: Icons.shopping_bag_rounded,
+                            label: 'View Orders',
                             color: const Color(0xFFF9E79F),
-                            onTap: () => _showNotifications(),
+                            onTap: () => _showShopkeeperOrders(),
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: _PastelActionCard(
-                            icon: Icons.refresh_rounded,
-                            label: 'Refresh Data',
+                            icon: Icons.visibility_rounded,
+                            label: 'Product Views',
                             color: const Color(0xFFB5C7F7),
-                            onTap: () => _refreshData(),
+                            onTap: () => _showProductViews(),
                           ),
                         ),
                       ],
@@ -745,7 +653,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 14),
 
                   SizedBox(
-                    height: 220, // Increased height to prevent overflow
+                    height: 240, // Increased height to prevent overflow
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -806,13 +714,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ],
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  '$_ecoPoints',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                Consumer<EcoChallengesProvider>(
+                                  builder: (context, challengesProvider, child) {
+                                    return Text(
+                                      '${challengesProvider.totalEcoPoints}',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    );
+                                  },
                                 ),
                                 Text(
                                   'Level ${(_ecoPoints / 100).floor()}',
@@ -909,7 +821,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         const Spacer(),
                         TextButton(
-                          onPressed: () => _showAllChallenges(),
+                          onPressed: () => _showEcoChallenges(),
                           child: Text(
                             'View All',
                             style: GoogleFonts.poppins(
@@ -924,17 +836,80 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                   const SizedBox(height: 14),
 
-                  SizedBox(
-                    height: 200,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _ecoChallenges.length,
-                      itemBuilder: (context, index) {
-                        final challenge = _ecoChallenges[index];
-                        return _buildChallengeCard(challenge);
-                      },
-                    ),
+                  Consumer<EcoChallengesProvider>(
+                    builder: (context, challengesProvider, child) {
+                      final activeChallenges = challengesProvider.activeChallenges.take(3).toList();
+                      
+                      if (activeChallenges.isEmpty) {
+                        return Container(
+                          height: 180,
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.emoji_events_rounded,
+                                  size: 48,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No Active Challenges',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Start your eco journey today!',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: () => _showEcoChallenges(),
+                                  icon: const Icon(Icons.add_rounded),
+                                  label: Text('View Challenges', style: GoogleFonts.poppins()),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFB5C7F7),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      return SizedBox(
+                        height: 180,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: activeChallenges.length,
+                          itemBuilder: (context, index) {
+                            final challenge = activeChallenges[index];
+                            return _buildRealChallengeCard(challenge);
+                          },
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 28),
@@ -969,105 +944,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                   const SizedBox(height: 14),
 
-                  SizedBox(
-                    height: 140,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _wishlist.length,
-                      itemBuilder: (context, index) {
-                        final item = _wishlist[index];
-                        return _buildWishlistCard(item);
-                      },
-                    ),
+                  Consumer<WishlistProvider>(
+                    builder: (context, wishlistProvider, child) {
+                      return SizedBox(
+                        height: 140,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: wishlistProvider.wishlistItems.length,
+                          itemBuilder: (context, index) {
+                            final item = wishlistProvider.wishlistItems[index];
+                            return _buildWishlistCard(item);
+                          },
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 28),
 
                   // Settings & Preferences Section
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18.0),
-                    child: Text(
-                      'Settings & Preferences',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF22223B),
-                      ),
-                    ),
-                  ),
+              
 
-                  const SizedBox(height: 14),
+                 
 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      children: [
-                        _buildSettingsCard(
-                          'Notifications',
-                          'Manage your notification preferences',
-                          Icons.notifications_rounded,
-                          const Color(0xFFB5C7F7),
-                          () => _showNotificationSettings(),
-                          trailing: Switch(
-                            value: _isNotificationsEnabled,
-                            onChanged: (value) {
-                              setState(() {
-                                _isNotificationsEnabled = value;
-                              });
-                              _showSnackBar(
-                                value ? 'Notifications enabled' : 'Notifications disabled',
-                              );
-                            },
-                            activeColor: const Color(0xFFB5C7F7),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildSettingsCard(
-                          'Dark Mode',
-                          'Switch between light and dark themes',
-                          Icons.dark_mode_rounded,
-                          const Color(0xFFE8D5C4),
-                          () {
-                            setState(() {
-                              _isDarkMode = !_isDarkMode;
-                            });
-                            _showSnackBar(
-                              _isDarkMode ? 'Dark mode enabled' : 'Light mode enabled',
-                            );
-                          },
-                          trailing: Switch(
-                            value: _isDarkMode,
-                            onChanged: (value) {
-                              setState(() {
-                                _isDarkMode = value;
-                              });
-                              _showSnackBar(
-                                value ? 'Dark mode enabled' : 'Light mode enabled',
-                              );
-                            },
-                            activeColor: const Color(0xFFE8D5C4),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildSettingsCard(
-                          'Eco Profile',
-                          'View and edit your eco profile',
-                          Icons.person_rounded,
-                          const Color(0xFFF9E79F),
-                          () => _showEcoProfile(),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildSettingsCard(
-                          'Help & Support',
-                          'Get help and contact support',
-                          Icons.help_rounded,
-                          const Color(0xFFD6EAF8),
-                          () => _showHelpSupport(),
-                        ),
-                      ],
-                    ),
-                  ),
+                  
 
                   const SizedBox(height: 28),
 
@@ -1300,39 +1201,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   
                   // Category Grid
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 1.2,
-                    children: [
-                      _buildCategoryCard(
-                        'Organic Food',
-                        Icons.restaurant_rounded,
-                        const Color(0xFFE8D5C4),
-                        '250+ items',
-                      ),
-                      _buildCategoryCard(
-                        'Eco Clothing',
-                        Icons.checkroom_rounded,
-                        const Color(0xFFD6EAF8),
-                        '180+ items',
-                      ),
-                      _buildCategoryCard(
-                        'Home & Garden',
-                        Icons.home_rounded,
-                        const Color(0xFFF9E79F),
-                        '320+ items',
-                      ),
-                      _buildCategoryCard(
-                        'Personal Care',
-                        Icons.spa_rounded,
-                        const Color(0xFFB5C7F7),
-                        '150+ items',
-                      ),
-                    ],
+                  SizedBox(
+                    height: 70,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: [
+                        _buildCategoryCard(
+                          'Organic Food',
+                          Icons.restaurant_rounded,
+                          const Color(0xFFE8D5C4),
+                          '250+ items',
+                        ),
+                        _buildCategoryCard(
+                          'Eco Clothing',
+                          Icons.checkroom_rounded,
+                          const Color(0xFFD6EAF8),
+                          '180+ items',
+                        ),
+                        _buildCategoryCard(
+                          'Home & Garden',
+                          Icons.home_rounded,
+                          const Color(0xFFF9E79F),
+                          '320+ items',
+                        ),
+                        _buildCategoryCard(
+                          'Personal Care',
+                          Icons.spa_rounded,
+                          const Color(0xFFB5C7F7),
+                          '150+ items',
+                        ),
+                      ],
+                    ),
                   ),
                   
                   const SizedBox(height: 24),
@@ -1340,66 +1240,80 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   // Special Offers
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFB5C7F7).withOpacity(0.8),
-                          const Color(0xFFF9E79F).withOpacity(0.8),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                      color: const Color(0xFFE8D5C4).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: const Color(0xFFE8D5C4).withOpacity(0.3),
+                        width: 1.5,
                       ),
-                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Column(
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.local_offer_rounded,
-                              color: const Color(0xFF22223B),
-                              size: 28,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Special Eco Deals',
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF22223B),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Get up to 40% off on eco-friendly products today! Limited time offer.',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: const Color(0xFF22223B),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8D5C4).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.local_offer_rounded,
+                            color: Color(0xFFE8D5C4),
+                            size: 20,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              _navigateToOffers();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF22223B),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Special Eco Deals',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF22223B),
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              'View All Offers',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
+                              const SizedBox(height: 4),
+                              Text(
+                                'Get up to 40% off on eco-friendly products today!',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: const Color(0xFF22223B).withOpacity(0.7),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8D5C4),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.pop(context);
+                                _navigateToOffers();
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                child: Text(
+                                  'View Offers',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF22223B),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -1483,50 +1397,56 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _navigateToCategory(title);
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
+        width: 140,
+        margin: const EdgeInsets.only(right: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: color.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1.5,
+          ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
             Container(
-              width: 50,
-              height: 50,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(25),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 icon,
                 color: color,
-                size: 28,
+                size: 18,
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: const Color(0xFF22223B),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              itemCount,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey[600],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      color: const Color(0xFF22223B),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    itemCount,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: color.withOpacity(0.8),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -1710,6 +1630,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // Show notifications bottom sheet
   void _showNotifications() {
+    // Check if notifications are enabled in settings
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    
+    if (!settingsProvider.pushNotificationsEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Notifications are disabled. Enable them in Settings.',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.orange,
+          action: SnackBarAction(
+            label: 'Settings',
+            textColor: Colors.white,
+            onPressed: () => Navigator.pushNamed(context, '/settings'),
+          ),
+        ),
+      );
+      return;
+    }
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1834,39 +1775,2485 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // Show impact tracker
-  void _showImpactTracker() {
+  // Show carbon saved details
+  void _showCarbonSavedDetails(CarbonTrackingProvider carbonProvider) {
+    final stats = carbonProvider.environmentalImpactStats;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Your Carbon Impact',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    
+                    // Total Carbon Saved Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.green.withOpacity(0.1),
+                            Colors.green.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.eco_rounded,
+                            size: 48,
+                            color: Colors.green[600],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '${carbonProvider.totalCarbonSaved.toStringAsFixed(1)} kg CO₂',
+                            style: GoogleFonts.poppins(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                          Text(
+                            'Total Carbon Saved',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.green[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Environmental Impact Stats
+                    Text(
+                      'Environmental Impact',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    _buildEnvironmentalImpactCard(
+                      'Equivalent to planting',
+                      '${stats['treesEquivalent'].toStringAsFixed(0)} trees',
+                      Icons.forest_rounded,
+                      Colors.green,
+                    ),
+                    
+                    _buildEnvironmentalImpactCard(
+                      'Car travel avoided',
+                      '${stats['carKmEquivalent'].toStringAsFixed(1)} km',
+                      Icons.directions_car_rounded,
+                      Colors.blue,
+                    ),
+                    
+                    _buildEnvironmentalImpactCard(
+                      'Electricity saved',
+                      '${stats['electricityEquivalent'].toStringAsFixed(1)} kWh',
+                      Icons.electric_bolt_rounded,
+                      Colors.orange,
+                    ),
+                    
+                    _buildEnvironmentalImpactCard(
+                      'Water saved',
+                      '${(carbonProvider.totalCarbonSaved * 1000).toStringAsFixed(0)} L',
+                      Icons.water_drop_rounded,
+                      Colors.cyan,
+                    ),
+                    
+                    _buildEnvironmentalImpactCard(
+                      'Waste reduced',
+                      '${(carbonProvider.totalCarbonSaved * 2).toStringAsFixed(1)} kg',
+                      Icons.delete_sweep_rounded,
+                      Colors.purple,
+                    ),
+                    
+                    _buildEnvironmentalImpactCard(
+                      'Air quality improved',
+                      '${(carbonProvider.totalCarbonSaved * 50).toStringAsFixed(0)} m³',
+                      Icons.air_rounded,
+                      Colors.teal,
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Detailed Environmental Breakdown
+                    Text(
+                      'Environmental Breakdown',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.analytics_rounded,
+                                color: Colors.green[600],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Impact Analysis',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF22223B),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildImpactRow('CO₂ Emissions Reduced', '${carbonProvider.totalCarbonSaved.toStringAsFixed(1)} kg', Colors.green),
+                          _buildImpactRow('Energy Consumption Saved', '${(carbonProvider.totalCarbonSaved * 2.5).toStringAsFixed(1)} kWh', Colors.orange),
+                          _buildImpactRow('Water Usage Reduced', '${(carbonProvider.totalCarbonSaved * 1000).toStringAsFixed(0)} L', Colors.blue),
+                          _buildImpactRow('Waste Diverted', '${(carbonProvider.totalCarbonSaved * 2).toStringAsFixed(1)} kg', Colors.purple),
+                          _buildImpactRow('Air Pollution Avoided', '${(carbonProvider.totalCarbonSaved * 0.5).toStringAsFixed(1)} kg', Colors.red),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Monthly and Yearly Stats
+                    Text(
+                      'Time-based Impact',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTimeBasedCard(
+                            'This Month',
+                            '${carbonProvider.currentMonthCarbonSaved.toStringAsFixed(1)} kg',
+                            Icons.calendar_month_rounded,
+                            const Color(0xFFB5C7F7),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTimeBasedCard(
+                            'This Year',
+                            '${carbonProvider.currentYearCarbonSaved.toStringAsFixed(1)} kg',
+                            Icons.calendar_today_rounded,
+                            const Color(0xFFF9E79F),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Recent Purchases
+                    if (carbonProvider.recentPurchases.isNotEmpty) ...[
+                      Text(
+                        'Recent Eco Purchases',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF22223B),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      ...carbonProvider.recentPurchases.take(3).map((purchase) => 
+                        _buildRecentPurchaseCard(purchase)
+                      ),
+                    ],
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Load Sample Data Button (for testing)
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          carbonProvider.loadSampleData();
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Sample carbon data loaded!', style: GoogleFonts.poppins()),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: Text('Load Sample Data', style: GoogleFonts.poppins()),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFB5C7F7),
+                          side: BorderSide(color: const Color(0xFFB5C7F7)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEnvironmentalImpactCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeBasedCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentPurchaseCard(CarbonPurchase purchase) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.shopping_cart_rounded, color: Colors.green, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Order #${purchase.orderId}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '₹${purchase.totalAmount.toStringAsFixed(0)} • ${purchase.totalCarbonSaved.toStringAsFixed(1)} kg CO₂ saved',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${purchase.timestamp.day}/${purchase.timestamp.month}/${purchase.timestamp.year}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImpactRow(String title, String value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.grey[600],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressCard(String title, String value, double progress, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF22223B),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: progress.clamp(0.0, 1.0),
+            backgroundColor: Colors.grey[200],
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityCard(CarbonPurchase purchase) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.shopping_cart_rounded, color: Colors.green, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Order #${purchase.orderId}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '₹${purchase.totalAmount.toStringAsFixed(0)} • ${purchase.totalCarbonSaved.toStringAsFixed(1)} kg CO₂',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${purchase.timestamp.day}/${purchase.timestamp.month}',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTipCategory(String title, List<String> tips, IconData icon, Color color) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ExpansionTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF22223B),
+          ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: tips.map((tip) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        tip,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show product views
+  void _showProductViews() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Recently Viewed Products',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    
+                    // View Statistics
+                    Consumer<ProductViewProvider>(
+                      builder: (context, productViewProvider, child) {
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFB5C7F7).withOpacity(0.8),
+                                const Color(0xFFD6EAF8).withOpacity(0.6),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFB5C7F7).withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.visibility_rounded,
+                                size: 48,
+                                color: const Color(0xFF22223B),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'View Statistics',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF22223B),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${productViewProvider.productsViewedTodayCount} products viewed today',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF22223B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Recently Viewed Products
+                    Text(
+                      'Recently Viewed',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Real viewed products from ProductViewProvider
+                    Consumer<ProductViewProvider>(
+                      builder: (context, productViewProvider, child) {
+                        final viewedProducts = productViewProvider.getRecentlyViewed(4);
+                        
+                        if (viewedProducts.isEmpty) {
+                          return Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.visibility_off_rounded,
+                                  size: 48,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No Products Viewed Yet',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Start browsing products to see them here!',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        
+                        return Column(
+                          children: viewedProducts.map((productView) => 
+                            _buildViewedProductCard(
+                              productView.name,
+                              '₹${productView.price.toStringAsFixed(0)}',
+                              productView.description,
+                              productView.rating,
+                              productView.icon,
+                              productView.color,
+                            )
+                          ).toList(),
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // View Categories
+                    Text(
+                      'Most Viewed Categories',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Consumer<ProductViewProvider>(
+                      builder: (context, productViewProvider, child) {
+                        final topCategories = productViewProvider.topViewedCategories;
+                        
+                        if (topCategories.isEmpty) {
+                          return Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.category_outlined,
+                                  size: 48,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No Category Data Yet',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Browse products to see category analytics',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        
+                        return Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildCategoryViewCard(
+                                    topCategories.isNotEmpty ? topCategories[0].key : 'No Data',
+                                    topCategories.isNotEmpty ? topCategories[0].value : 0,
+                                    _getCategoryIcon(topCategories.isNotEmpty ? topCategories[0].key : ''),
+                                    _getCategoryColor(topCategories.isNotEmpty ? topCategories[0].key : ''),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildCategoryViewCard(
+                                    topCategories.length > 1 ? topCategories[1].key : 'No Data',
+                                    topCategories.length > 1 ? topCategories[1].value : 0,
+                                    _getCategoryIcon(topCategories.length > 1 ? topCategories[1].key : ''),
+                                    _getCategoryColor(topCategories.length > 1 ? topCategories[1].key : ''),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            
+                            if (topCategories.length > 2) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildCategoryViewCard(
+                                      topCategories[2].key,
+                                      topCategories[2].value,
+                                      _getCategoryIcon(topCategories[2].key),
+                                      _getCategoryColor(topCategories[2].key),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildCategoryViewCard(
+                                      topCategories.length > 3 ? topCategories[3].key : 'No Data',
+                                      topCategories.length > 3 ? topCategories[3].value : 0,
+                                      _getCategoryIcon(topCategories.length > 3 ? topCategories[3].key : ''),
+                                      _getCategoryColor(topCategories.length > 3 ? topCategories[3].key : ''),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Quick Actions
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _navigateToShopping();
+                        },
+                        icon: const Icon(Icons.shopping_cart_rounded),
+                        label: Text('Continue Shopping', style: GoogleFonts.poppins()),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFB5C7F7),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildViewedProductCard(String name, String price, String description, double rating, IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      price,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryViewCard(String category, int viewCount, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            category,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$viewCount views',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'clothing':
+        return Icons.checkroom_rounded;
+      case 'accessories':
+        return Icons.shopping_bag_rounded;
+      case 'electronics':
+        return Icons.devices_rounded;
+      case 'personal care':
+        return Icons.face_rounded;
+      case 'food & beverages':
+        return Icons.restaurant_rounded;
+      case 'home & garden':
+        return Icons.home_rounded;
+      default:
+        return Icons.category_rounded;
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'clothing':
+        return const Color(0xFFB5C7F7);
+      case 'accessories':
+        return const Color(0xFFF9E79F);
+      case 'electronics':
+        return const Color(0xFFD6EAF8);
+      case 'personal care':
+        return const Color(0xFFE8D5C4);
+      case 'food & beverages':
+        return Colors.green;
+      case 'home & garden':
+        return Colors.orange;
+      default:
+        return const Color(0xFFB5C7F7);
+    }
+  }
+
+  Widget _buildRealChallengeCard(EcoChallenge challenge) {
+    return Container(
+      width: 260,
+      height: 160,
+      margin: const EdgeInsets.only(right: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: challenge.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    challenge.icon,
+                    color: challenge.color,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        challenge.title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF22223B),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        challenge.reward,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: challenge.color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Delete Button
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    color: Colors.grey[600],
+                    size: 18,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'delete') {
+                      _showDeleteConfirmation(challenge);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_rounded, color: Colors.red, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete Challenge',
+                            style: GoogleFonts.poppins(
+                              color: Colors.red,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              challenge.description,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: Colors.grey[600],
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Progress',
+                        style: GoogleFonts.poppins(
+                          fontSize: 9,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      Text(
+                        '${challenge.currentProgress}/${challenge.targetValue} ${challenge.targetUnit}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF22223B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (challenge.isCompleted)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Completed!',
+                      style: GoogleFonts.poppins(
+                        fontSize: 9,
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            LinearProgressIndicator(
+              value: challenge.progressPercentage,
+              backgroundColor: Colors.grey[200],
+              valueColor: AlwaysStoppedAnimation<Color>(challenge.color),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEcoChallenges() {
+    // Force initialize challenges if empty
+    final challengesProvider = Provider.of<EcoChallengesProvider>(context, listen: false);
+    challengesProvider.forceInitialize();
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Eco Challenges',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Consumer<EcoChallengesProvider>(
+                builder: (context, challengesProvider, child) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+                        
+                        // Overview Stats
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFB5C7F7).withOpacity(0.8),
+                                const Color(0xFFD6EAF8).withOpacity(0.6),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFB5C7F7).withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.emoji_events_rounded,
+                                size: 48,
+                                color: const Color(0xFF22223B),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Challenge Overview',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF22223B),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildChallengeStat('Active', '${challengesProvider.getActiveChallengesCount()}', Icons.play_circle_rounded),
+                                  _buildChallengeStat('Completed', '${challengesProvider.getCompletedChallengesCount()}', Icons.check_circle_rounded),
+                                  _buildChallengeStat('Points', '${challengesProvider.totalEcoPoints}', Icons.stars_rounded),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Active Challenges
+                        Text(
+                          'Active Challenges',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF22223B),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        ...challengesProvider.activeChallenges.map((challenge) => 
+                          _buildDetailedChallengeCard(challenge, challengesProvider)
+                        ).toList(),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Completed Challenges
+                        if (challengesProvider.completedChallenges.isNotEmpty) ...[
+                          Text(
+                            'Completed Challenges',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF22223B),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          ...challengesProvider.completedChallenges.map((challenge) => 
+                            _buildCompletedChallengeCard(challenge)
+                          ).toList(),
+                          
+                          const SizedBox(height: 24),
+                        ],
+                        
+                        // Action Buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  challengesProvider.loadSampleProgress();
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Sample challenge progress loaded!', style: GoogleFonts.poppins()),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.refresh_rounded),
+                                label: Text('Load Sample', style: GoogleFonts.poppins()),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFB5C7F7),
+                                  side: BorderSide(color: const Color(0xFFB5C7F7)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showAddChallengeDialog(context, challengesProvider),
+                                icon: const Icon(Icons.add_rounded),
+                                label: Text('Add Challenge', style: GoogleFonts.poppins()),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFB5C7F7),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChallengeStat(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.white.withOpacity(0.8),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailedChallengeCard(EcoChallenge challenge, EcoChallengesProvider provider) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: challenge.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    challenge.icon,
+                    color: challenge.color,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        challenge.title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF22223B),
+                        ),
+                      ),
+                      Text(
+                        challenge.category,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: challenge.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    challenge.reward,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: challenge.color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Delete Button
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    color: Colors.grey[600],
+                    size: 20,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'delete') {
+                      _showDeleteConfirmation(challenge);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_rounded, color: Colors.red, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete Challenge',
+                            style: GoogleFonts.poppins(
+                              color: Colors.red,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              challenge.description,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Progress',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      Text(
+                        '${challenge.currentProgress}/${challenge.targetValue} ${challenge.targetUnit}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF22223B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    provider.updateProgress(challenge.id, 1);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Progress updated!', style: GoogleFonts.poppins()),
+                        backgroundColor: challenge.color,
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Update Progress',
+                    style: GoogleFonts.poppins(
+                      color: challenge.color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: challenge.progressPercentage,
+              backgroundColor: Colors.grey[200],
+              valueColor: AlwaysStoppedAnimation<Color>(challenge.color),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompletedChallengeCard(EcoChallenge challenge) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.green.withOpacity(0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.green,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    challenge.title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  Text(
+                    'Completed! +${challenge.reward}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Delete Button
+            PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_vert_rounded,
+                color: Colors.grey[600],
+                size: 20,
+              ),
+              onSelected: (value) {
+                if (value == 'delete') {
+                  _showDeleteConfirmation(challenge);
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_rounded, color: Colors.red, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Delete Challenge',
+                        style: GoogleFonts.poppins(
+                          color: Colors.red,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(EcoChallenge challenge) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
         title: Text(
-          'Real-time Impact Tracker',
+          'Delete Challenge',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
             color: const Color(0xFF22223B),
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildImpactMetric('Carbon Saved', '${_carbonSaved.toStringAsFixed(1)} kg', Icons.eco_rounded, Colors.green),
-            _buildImpactMetric('Money Saved', '₹${_todaysSavings.toStringAsFixed(0)}', Icons.savings_rounded, const Color(0xFFB5C7F7)),
-            _buildImpactMetric('Products Viewed', _productsViewed.toString(), Icons.visibility_rounded, const Color(0xFFF9E79F)),
-            _buildImpactMetric('Community Rank', '#${Random().nextInt(100) + 1}', Icons.leaderboard_rounded, const Color(0xFFE8D5C4)),
-          ],
+        content: Text(
+          'Are you sure you want to delete "${challenge.title}"? This action cannot be undone.',
+          style: GoogleFonts.poppins(
+            color: Colors.grey[700],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Close',
-              style: GoogleFonts.poppins(color: const Color(0xFFB5C7F7)),
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
             ),
           ),
+          ElevatedButton(
+            onPressed: () {
+              final provider = Provider.of<EcoChallengesProvider>(context, listen: false);
+              provider.deleteChallenge(challenge.id);
+              Navigator.pop(context);
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Challenge deleted successfully!', style: GoogleFonts.poppins()),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete', style: GoogleFonts.poppins()),
+          ),
         ],
+      ),
+    );
+  }
+
+  void _showAddChallengeDialog(BuildContext context, EcoChallengesProvider provider) {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final rewardController = TextEditingController();
+    final targetValueController = TextEditingController();
+    final targetUnitController = TextEditingController();
+    final categoryController = TextEditingController();
+    
+    Color selectedColor = const Color(0xFFB5C7F7);
+    IconData selectedIcon = Icons.eco_rounded;
+    int selectedDuration = 7;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(
+            'Add New Challenge',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Challenge Title',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: rewardController,
+                        decoration: InputDecoration(
+                          labelText: 'Reward (e.g., 500 Eco Points)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: targetValueController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Target Value',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: targetUnitController,
+                        decoration: InputDecoration(
+                          labelText: 'Target Unit (e.g., days, kg)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: categoryController,
+                        decoration: InputDecoration(
+                          labelText: 'Category',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Color Selection
+                Text(
+                  'Select Color:',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    const Color(0xFFB5C7F7),
+                    const Color(0xFFF9E79F),
+                    const Color(0xFFE8D5C4),
+                    Colors.cyan,
+                    Colors.orange,
+                    Colors.green,
+                    const Color(0xFFD6EAF8),
+                    const Color(0xFFE8F5E8),
+                  ].map((color) => GestureDetector(
+                    onTap: () => setState(() => selectedColor = color),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: selectedColor == color ? Colors.black : Colors.transparent,
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                  )).toList(),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Icon Selection
+                Text(
+                  'Select Icon:',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 120,
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Icons.eco_rounded,
+                        Icons.recycling_rounded,
+                        Icons.store_rounded,
+                        Icons.water_drop_rounded,
+                        Icons.electric_bolt_rounded,
+                        Icons.restaurant_rounded,
+                        Icons.no_drinks_rounded,
+                        Icons.directions_bike_rounded,
+                        Icons.home_rounded,
+                        Icons.shopping_bag_rounded,
+                        Icons.self_improvement_rounded,
+                        Icons.fitness_center_rounded,
+                        Icons.park_rounded,
+                        Icons.forest_rounded,
+                        Icons.agriculture_rounded,
+                        Icons.solar_power_rounded,
+                        Icons.wind_power_rounded,
+                        Icons.volunteer_activism_rounded,
+                        Icons.psychology_rounded,
+                        Icons.spa_rounded,
+                        Icons.local_florist_rounded,
+                        Icons.eco_rounded,
+                        Icons.cleaning_services_rounded,
+                        Icons.handyman_rounded,
+                        Icons.construction_rounded,
+                      ].map((icon) => GestureDetector(
+                        onTap: () => setState(() => selectedIcon = icon),
+                        child: Container(
+                          width: 45,
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: selectedIcon == icon ? selectedColor.withOpacity(0.1) : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: selectedIcon == icon ? selectedColor : Colors.grey[300]!,
+                              width: selectedIcon == icon ? 2 : 1,
+                            ),
+                          ),
+                          child: Icon(
+                            icon,
+                            color: selectedIcon == icon ? selectedColor : Colors.grey[700],
+                            size: 22,
+                          ),
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Duration Selection
+                Text(
+                  'Challenge Duration:',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  value: selectedDuration,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: [7, 14, 21, 30].map((days) => DropdownMenuItem(
+                    value: days,
+                    child: Text('$days days'),
+                  )).toList(),
+                  onChanged: (value) => setState(() => selectedDuration = value!),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(color: Colors.grey[600]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (titleController.text.isNotEmpty &&
+                    descriptionController.text.isNotEmpty &&
+                    rewardController.text.isNotEmpty &&
+                    targetValueController.text.isNotEmpty &&
+                    targetUnitController.text.isNotEmpty &&
+                    categoryController.text.isNotEmpty) {
+                  
+                  final now = DateTime.now();
+                  final newChallenge = EcoChallenge(
+                    id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+                    title: titleController.text,
+                    description: descriptionController.text,
+                    reward: rewardController.text,
+                    color: selectedColor,
+                    icon: selectedIcon,
+                    targetValue: int.parse(targetValueController.text),
+                    targetUnit: targetUnitController.text,
+                    startDate: now,
+                    endDate: now.add(Duration(days: selectedDuration)),
+                    category: categoryController.text,
+                  );
+                  
+                  print('About to add challenge: ${newChallenge.title}');
+                  provider.addCustomChallenge(newChallenge);
+                  print('Challenge added, closing dialog');
+                  Navigator.pop(context);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('New challenge added successfully!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Please fill all fields!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB5C7F7),
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Add Challenge', style: GoogleFonts.poppins()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Show impact tracker
+  void _showImpactTracker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Impact Tracker',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    
+                    // Real-time Impact Overview
+                    Consumer<CarbonTrackingProvider>(
+                      builder: (context, carbonProvider, child) {
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFD6EAF8).withOpacity(0.8),
+                                const Color(0xFFB5C7F7).withOpacity(0.6),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFD6EAF8).withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.track_changes_rounded,
+                                size: 48,
+                                color: const Color(0xFF22223B),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Real-time Impact',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF22223B),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${carbonProvider.totalCarbonSaved.toStringAsFixed(1)} kg CO₂ saved',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Key Metrics
+                    Text(
+                      'Key Metrics',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Consumer<CarbonTrackingProvider>(
+                      builder: (context, carbonProvider, child) {
+                        return Column(
+                          children: [
+                            _buildImpactMetric('Carbon Saved', '${carbonProvider.totalCarbonSaved.toStringAsFixed(1)} kg', Icons.eco_rounded, Colors.green),
+                            _buildImpactMetric('Money Saved', '₹${_todaysSavings.toStringAsFixed(0)}', Icons.savings_rounded, const Color(0xFFB5C7F7)),
+                            _buildImpactMetric('Products Viewed', _productsViewed.toString(), Icons.visibility_rounded, const Color(0xFFF9E79F)),
+                            _buildImpactMetric('Community Rank', '#${Random().nextInt(100) + 1}', Icons.leaderboard_rounded, const Color(0xFFE8D5C4)),
+                            _buildImpactMetric('Eco Points', '$_ecoPoints', Icons.stars_rounded, Colors.amber),
+                            _buildImpactMetric('Streak Days', '$_streakDays days', Icons.local_fire_department_rounded, Colors.orange),
+                          ],
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Environmental Impact Breakdown
+                    Text(
+                      'Environmental Impact',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Consumer<CarbonTrackingProvider>(
+                      builder: (context, carbonProvider, child) {
+                        final stats = carbonProvider.environmentalImpactStats;
+                        return Column(
+                          children: [
+                            _buildEnvironmentalImpactCard(
+                              'Trees Equivalent',
+                              '${stats['treesEquivalent'].toStringAsFixed(0)} trees',
+                              Icons.forest_rounded,
+                              Colors.green,
+                            ),
+                            _buildEnvironmentalImpactCard(
+                              'Car Travel Avoided',
+                              '${stats['carKmEquivalent'].toStringAsFixed(1)} km',
+                              Icons.directions_car_rounded,
+                              Colors.blue,
+                            ),
+                            _buildEnvironmentalImpactCard(
+                              'Electricity Saved',
+                              '${stats['electricityEquivalent'].toStringAsFixed(1)} kWh',
+                              Icons.electric_bolt_rounded,
+                              Colors.orange,
+                            ),
+                            _buildEnvironmentalImpactCard(
+                              'Water Saved',
+                              '${(carbonProvider.totalCarbonSaved * 1000).toStringAsFixed(0)} L',
+                              Icons.water_drop_rounded,
+                              Colors.cyan,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Progress Tracking
+                    Text(
+                      'Progress Tracking',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Consumer<CarbonTrackingProvider>(
+                      builder: (context, carbonProvider, child) {
+                        return Column(
+                          children: [
+                            _buildProgressCard(
+                              'Monthly Goal',
+                              '${carbonProvider.currentMonthCarbonSaved.toStringAsFixed(1)} / 5.0 kg',
+                              carbonProvider.currentMonthCarbonSaved / 5.0,
+                              Icons.calendar_month_rounded,
+                              const Color(0xFFB5C7F7),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildProgressCard(
+                              'Yearly Goal',
+                              '${carbonProvider.currentYearCarbonSaved.toStringAsFixed(1)} / 50.0 kg',
+                              carbonProvider.currentYearCarbonSaved / 50.0,
+                              Icons.calendar_today_rounded,
+                              const Color(0xFFF9E79F),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Recent Activity
+                    Text(
+                      'Recent Activity',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Consumer<CarbonTrackingProvider>(
+                      builder: (context, carbonProvider, child) {
+                        if (carbonProvider.recentPurchases.isNotEmpty) {
+                          return Column(
+                            children: carbonProvider.recentPurchases.take(2).map((purchase) => 
+                              _buildActivityCard(purchase)
+                            ).toList(),
+                          );
+                        } else {
+                          return Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.history_rounded,
+                                  size: 48,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No Recent Activity',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Start shopping eco-friendly products to see your impact!',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Load Sample Data Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          final carbonProvider = Provider.of<CarbonTrackingProvider>(context, listen: false);
+                          carbonProvider.loadSampleData();
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Sample impact data loaded!', style: GoogleFonts.poppins()),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: Text('Load Sample Data', style: GoogleFonts.poppins()),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFB5C7F7),
+                          side: BorderSide(color: const Color(0xFFB5C7F7)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1901,50 +4288,336 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // Show eco tips
   void _showEcoTips() {
-    List<String> tips = [
-      "💡 Use reusable bags for shopping",
-      "🌱 Choose organic products when possible",
-      "♻️ Recycle packaging materials",
-      "🚗 Walk or cycle for short distances",
-      "💧 Conserve water at home",
-      "🌟 Buy from local eco-friendly stores",
-    ];
-
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          'Daily Eco Tips',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF22223B),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: tips.map((tip) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Text(
-              tip,
-              style: GoogleFonts.poppins(
-                color: Colors.grey[700],
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
               ),
             ),
-          )).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Got it!',
-              style: GoogleFonts.poppins(color: const Color(0xFFB5C7F7)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Daily Eco Tips',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    
+                    // Today's Featured Tip
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFB5C7F7).withOpacity(0.8),
+                            const Color(0xFFD6EAF8).withOpacity(0.6),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFB5C7F7).withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.lightbulb_rounded,
+                            size: 48,
+                            color: const Color(0xFF22223B),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Today\'s Featured Tip',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF22223B),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '🌱 Start your day with a plant-based meal!',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF22223B),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Reduces your carbon footprint by up to 2.5 kg CO₂ per day',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Tip Categories
+                    Text(
+                      'Tip Categories',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Shopping Tips
+                    _buildTipCategory(
+                      '🛒 Shopping Smart',
+                      [
+                        'Use reusable bags and containers',
+                        'Choose products with minimal packaging',
+                        'Buy in bulk to reduce packaging waste',
+                        'Support local eco-friendly businesses',
+                        'Look for organic and fair-trade labels',
+                      ],
+                      Icons.shopping_bag_rounded,
+                      const Color(0xFFB5C7F7),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Home Tips
+                    _buildTipCategory(
+                      '🏠 Home & Energy',
+                      [
+                        'Switch to LED bulbs (saves 75% energy)',
+                        'Unplug devices when not in use',
+                        'Use cold water for laundry',
+                        'Install low-flow showerheads',
+                        'Compost kitchen waste',
+                      ],
+                      Icons.home_rounded,
+                      const Color(0xFFF9E79F),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Transportation Tips
+                    _buildTipCategory(
+                      '🚗 Transportation',
+                      [
+                        'Walk or cycle for short distances',
+                        'Use public transportation',
+                        'Carpool with colleagues',
+                        'Maintain your vehicle properly',
+                        'Consider electric or hybrid vehicles',
+                      ],
+                      Icons.directions_car_rounded,
+                      const Color(0xFFE8D5C4),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Food & Diet Tips
+                    _buildTipCategory(
+                      '🍽️ Food & Diet',
+                      [
+                        'Reduce meat consumption',
+                        'Buy seasonal and local produce',
+                        'Avoid food waste - plan meals',
+                        'Grow your own herbs and vegetables',
+                        'Use leftovers creatively',
+                      ],
+                      Icons.restaurant_rounded,
+                      Colors.green,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Water Conservation Tips
+                    _buildTipCategory(
+                      '💧 Water Conservation',
+                      [
+                        'Fix leaky faucets immediately',
+                        'Take shorter showers',
+                        'Collect rainwater for plants',
+                        'Use a broom instead of hose',
+                        'Install water-efficient appliances',
+                      ],
+                      Icons.water_drop_rounded,
+                      Colors.cyan,
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Weekly Challenge
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.orange.withOpacity(0.1),
+                            Colors.amber.withOpacity(0.1),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.emoji_events_rounded,
+                            size: 40,
+                            color: Colors.orange[700],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'This Week\'s Challenge',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF22223B),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Go plastic-free for 7 days!',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF22223B),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Track your progress and earn bonus eco points',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Challenge accepted! Track your progress in Impact Tracker.', style: GoogleFonts.poppins()),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.check_rounded),
+                            label: Text('Accept Challenge', style: GoogleFonts.poppins()),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Quick Actions
+                    Text(
+                      'Quick Actions',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _navigateToShopping();
+                            },
+                            icon: const Icon(Icons.shopping_cart_rounded),
+                            label: Text('Shop Eco', style: GoogleFonts.poppins()),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFB5C7F7),
+                              side: BorderSide(color: const Color(0xFFB5C7F7)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showImpactTracker();
+                            },
+                            icon: const Icon(Icons.track_changes_rounded),
+                            label: Text('Track Impact', style: GoogleFonts.poppins()),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.green,
+                              side: BorderSide(color: Colors.green),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2097,7 +4770,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                               ),
                               Text(
-                                activity['time'],
+                                _getTimeAgoFromDateTime(activity['time']),
                                 style: GoogleFonts.poppins(
                                   color: Colors.grey[500],
                                   fontSize: 12,
@@ -2250,7 +4923,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       isScrollControlled: true,
       builder: (context) => Consumer<CartProvider>(
         builder: (context, cartProvider, child) => Container(
-          height: MediaQuery.of(context).size.height * 0.7,
+          height: MediaQuery.of(context).size.height * 0.85,
           decoration: const BoxDecoration(
             color: Color(0xFFF7F6F2),
             borderRadius: BorderRadius.vertical(
@@ -2269,7 +4942,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
               Expanded(
-                child: Padding(
+                child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2277,7 +4950,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       // Product Image Section
                       Container(
                         width: double.infinity,
-                        height: 200,
+                        height: 160,
                         decoration: BoxDecoration(
                           color: product['color'].withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -2285,21 +4958,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: Icon(
                           product['icon'],
                           color: product['color'],
-                          size: 80,
+                          size: 60,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       
                       // Product Details
                       Text(
                         product['name'],
                         style: GoogleFonts.poppins(
-                          fontSize: 24,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF22223B),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       
                       Row(
                         children: [
@@ -2331,17 +5004,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       
                       Text(
                         product['price'],
                         style: GoogleFonts.poppins(
-                          fontSize: 28,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: product['color'],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       
                       Text(
                         'Eco-friendly product made with sustainable materials. Perfect for environmentally conscious customers.',
@@ -2353,7 +5026,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       
                       // Quantity Selection
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           Text(
@@ -2404,7 +5077,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ],
                       ),
                       
-                      const Spacer(),
+                      const SizedBox(height: 24),
                       
                       // Action Buttons
                       Row(
@@ -2621,31 +5294,51 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         product['name'],
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 12,
                           color: const Color(0xFF22223B),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Row(
                         children: [
                           Icon(
                             Icons.star_rounded,
                             color: Colors.amber,
-                            size: 14,
+                            size: 12,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 2),
                           Text(
                             product['rating'],
                             style: GoogleFonts.poppins(
-                              fontSize: 11,
+                              fontSize: 10,
                               color: Colors.grey[600],
                             ),
                           ),
                         ],
                       ),
                       const Spacer(),
+                      // Environmental Impact
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.eco_rounded,
+                            size: 8,
+                            color: Colors.green[600],
+                          ),
+                          const SizedBox(width: 1),
+                          Text(
+                            'Eco',
+                            style: GoogleFonts.poppins(
+                              fontSize: 7,
+                              color: Colors.green[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -2653,14 +5346,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             product['price'],
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 14,
                               color: product['color'],
                             ),
                           ),
                           Icon(
                             Icons.add_shopping_cart_rounded,
                             color: product['color'],
-                            size: 20,
+                            size: 18,
                           ),
                         ],
                       ),
@@ -2882,9 +5575,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               const Spacer(),
               GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _wishlist.remove(item);
-                  });
+                  final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
+                  wishlistProvider.removeFromWishlist(item['id']);
                   _showSnackBar('Removed from wishlist');
                 },
                 child: const Icon(Icons.favorite, color: Colors.red, size: 18),
@@ -2909,7 +5601,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                item['price'],
+                '₹${(item['price'] as double).toStringAsFixed(2)}',
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -2922,6 +5614,129 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Icons.add_shopping_cart_rounded,
                   color: item['color'],
                   size: 18,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFullWishlistCard(Map<String, dynamic> item) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: item['color'].withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              item['icon'],
+              color: item['color'],
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['name'],
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item['category'] ?? 'General',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      '₹${(item['price'] as double).toStringAsFixed(2)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: item['color'],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${item['carbonFootprint']} kg CO₂',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: Colors.green[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Column(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
+                  wishlistProvider.removeFromWishlist(item['id']);
+                  _showSnackBar('Removed from wishlist');
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.favorite, color: Colors.red, size: 20),
+                ),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => _addToWishlistCart(item),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: item['color'].withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.add_shopping_cart_rounded,
+                    color: item['color'],
+                    size: 20,
+                  ),
                 ),
               ),
             ],
@@ -2996,68 +5811,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
 
 
-  void _showAllChallenges() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF7F6F2),
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(32),
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 16),
-              width: 50,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2.5),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Text(
-                    'Eco Challenges',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF22223B),
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _ecoChallenges.length,
-                itemBuilder: (context, index) {
-                  final challenge = _ecoChallenges[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: _buildChallengeCard(challenge),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   void _showWishlist() {
     showModalBottomSheet(
@@ -3096,6 +5850,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   const Spacer(),
+                  Consumer<WishlistProvider>(
+                    builder: (context, wishlistProvider, child) {
+                      return Text(
+                        '${wishlistProvider.wishlistCount} items',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      );
+                    },
+                  ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close_rounded),
@@ -3104,7 +5869,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
             Expanded(
-              child: _wishlist.isEmpty
+              child: Consumer<WishlistProvider>(
+                builder: (context, wishlistProvider, child) {
+                  return wishlistProvider.wishlistItems.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -3131,20 +5898,53 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               color: Colors.grey[500],
                             ),
                           ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.pushNamed(context, '/product-catalog');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFB5C7F7),
+                              foregroundColor: const Color(0xFF22223B),
+                            ),
+                            child: Text(
+                              'Start Shopping',
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () {
+                              final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
+                              wishlistProvider.addSampleItems();
+                              Navigator.pop(context);
+                              _showWishlist();
+                            },
+                            child: Text(
+                              'Add Sample Items (Test)',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFFB5C7F7),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _wishlist.length,
+                      itemCount: wishlistProvider.wishlistItems.length,
                       itemBuilder: (context, index) {
-                        final item = _wishlist[index];
+                        final item = wishlistProvider.wishlistItems[index];
                         return Container(
                           margin: const EdgeInsets.only(bottom: 16),
-                          child: _buildWishlistCard(item),
+                          child: _buildFullWishlistCard(item),
                         );
                       },
-                    ),
+                    );
+                },
+              ),
             ),
           ],
         ),
@@ -3263,11 +6063,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    _buildProfileMetric('Total Carbon Saved', '${_carbonSaved.toStringAsFixed(1)} kg'),
+                    Consumer<CarbonTrackingProvider>(
+                      builder: (context, carbonProvider, child) {
+                        return _buildProfileMetric('Total Carbon Saved', '${carbonProvider.totalCarbonSaved.toStringAsFixed(1)} kg');
+                      },
+                    ),
                     _buildProfileMetric('Eco Points', '$_ecoPoints'),
                     _buildProfileMetric('Current Streak', '$_streakDays days'),
                     _buildProfileMetric('Total Orders', '0'),
-                    _buildProfileMetric('Wishlist Items', '${_wishlist.length}'),
+                    Consumer<WishlistProvider>(
+                      builder: (context, wishlistProvider, child) {
+                        return _buildProfileMetric('Wishlist Items', '${wishlistProvider.wishlistCount}');
+                      },
+                    ),
                     _buildProfileMetric('Challenges Completed', '2'),
                   ],
                 ),
@@ -3397,9 +6205,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _addToWishlistCart(Map<String, dynamic> item) {
-    // Extract price from string (remove ₹ symbol)
-    String priceString = item['price'].toString().replaceAll('₹', '').replaceAll(',', '');
-    double price = double.tryParse(priceString) ?? 0.0;
+    // Price is already a double from WishlistProvider
+    double price = (item['price'] as double);
     
     // Determine category based on product name or icon
     String category = _getProductCategory(item);
@@ -3419,9 +6226,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       carbonFootprint: carbonFootprint,
     );
     
-    setState(() {
-      _wishlist.remove(item);
-    });
+    final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
+    wishlistProvider.removeFromWishlist(item['id']);
     
     _showSnackBar('${item['name']} added to cart!');
   }
@@ -3481,276 +6287,410 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       return 1.0; // Default carbon footprint
     }
   }
-}
 
-// Animated Stat Card Widget - Updated to match pastel chip style
-class _AnimatedStatCard extends StatefulWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const _AnimatedStatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-    this.onTap,
-  });
-
-  @override
-  _AnimatedStatCardState createState() => _AnimatedStatCardState();
-}
-
-class _AnimatedStatCardState extends State<_AnimatedStatCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  bool _isHovered = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
+  // Shopkeeper Orders Management
+  void _showShopkeeperOrders() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _buildShopkeeperOrdersModal(),
     );
-
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.05,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
-
-    // Only animate once on init for a subtle entrance effect
-        _controller.forward().then((_) {
-          _controller.reverse();
-    });
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _scaleAnimation.value,
-          child: GestureDetector(
-            onTap: widget.onTap,
-            onTapDown: (_) {
-              setState(() => _isHovered = true);
-              _controller.forward();
-            },
-            onTapUp: (_) {
-              setState(() => _isHovered = false);
-              _controller.reverse();
-            },
-            onTapCancel: () {
-              setState(() => _isHovered = false);
-              _controller.reverse();
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(16),
+  Widget _buildShopkeeperOrdersModal() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F6F2),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(32),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 16),
+            width: 50,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2.5),
+            ),
+          ),
+          
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Text(
+                  'Shopkeeper Orders 📦',
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                  color: Colors.grey[600],
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Orders Summary
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildOrderStatCard(
+                    'Pending',
+                    '12',
+                    Icons.pending_rounded,
+                    const Color(0xFFFFB74D),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildOrderStatCard(
+                    'Processing',
+                    '8',
+                    Icons.sync_rounded,
+                    const Color(0xFF64B5F6),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildOrderStatCard(
+                    'Completed',
+                    '45',
+                    Icons.check_circle_rounded,
+                    const Color(0xFF81C784),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Orders List
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
               decoration: BoxDecoration(
-                color: widget.color,
-                borderRadius: BorderRadius.circular(24),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(_isHovered ? 0.15 : 0.08),
-                    blurRadius: _isHovered ? 20 : 16,
-                    offset: Offset(0, _isHovered ? 10 : 8),
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                          widget.icon,
-                    color: const Color(0xFF22223B),
-                          size: 28,
+                  // Orders Header
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Recent Orders',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF22223B),
+                          ),
                         ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.value,
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF22223B),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E8),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '₹12,450',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF2E7D32),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: const Color(0xFF22223B).withOpacity(0.7),
-                      fontWeight: FontWeight.w500,
+                  
+                  // Orders List
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: 10,
+                      itemBuilder: (context, index) {
+                        return _buildOrderItem(index);
+                      },
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
           ),
-        );
-      },
-    );
-  }
-}
-
-// Enhanced Shopping Card Widget
-class _EnhancedShoppingCard extends StatefulWidget {
-  final VoidCallback onTap;
-
-  const _EnhancedShoppingCard({
-    required this.onTap,
-  });
-
-  @override
-  _EnhancedShoppingCardState createState() => _EnhancedShoppingCardState();
-}
-
-class _EnhancedShoppingCardState extends State<_EnhancedShoppingCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  int _dealCount = 25;
-  Timer? _dealTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.95,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
-
-    // Update deal count less frequently to improve performance
-    _dealTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
-      if (mounted) {
-        setState(() {
-          _dealCount = 20 + Random().nextInt(30);
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _dealTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) => _controller.reverse(),
-      onTapCancel: () => _controller.reverse(),
-      onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFFF9E79F),
-                    const Color(0xFFF9E79F).withOpacity(0.8),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFF9E79F).withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Stack(
-                    children: [
-                      Icon(
-                        Icons.shopping_bag_rounded,
-                        color: const Color(0xFF22223B),
-                        size: 32,
-                      ),
-                      Positioned(
-                        right: -2,
-                        top: -2,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '$_dealCount',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Start Shopping',
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF22223B),
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$_dealCount deals',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: const Color(0xFF22223B).withOpacity(0.7),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+          
+          const SizedBox(height: 20),
+        ],
       ),
     );
+  }
+
+  Widget _buildOrderStatCard(String title, String count, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            count,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderItem(int index) {
+    final orderStatuses = ['Pending', 'Processing', 'Completed'];
+    final statusColors = [
+      const Color(0xFFFFB74D),
+      const Color(0xFF64B5F6),
+      const Color(0xFF81C784),
+    ];
+    
+    final status = orderStatuses[index % 3];
+    final statusColor = statusColors[index % 3];
+    final orderNumber = 'ORD-${(2024000 + index).toString()}';
+    final customerName = ['Priya Sharma', 'Rahul Kumar', 'Anjali Patel', 'Vikram Singh', 'Meera Reddy'][index % 5];
+    final amount = (1200 + (index * 150)).toDouble();
+    final items = (2 + (index % 3)).toString();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          // Order Icon
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.shopping_bag_rounded,
+              color: statusColor,
+              size: 20,
+            ),
+          ),
+          
+          const SizedBox(width: 12),
+          
+          // Order Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        orderNumber,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF22223B),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        status.substring(0, status.length > 6 ? 6 : status.length),
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  customerName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: const Color(0xFF22223B).withOpacity(0.7),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Text(
+                      '$items items',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: const Color(0xFF22223B).withOpacity(0.6),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '₹${amount.toStringAsFixed(0)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(width: 8),
+          
+          // Action Button
+          Container(
+            decoration: BoxDecoration(
+              color: statusColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showOrderDetails(index),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: Text(
+                    status == 'Completed' ? 'View' : 'Update',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOrderDetails(int orderIndex) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Order Details',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Order: ORD-${(2024000 + orderIndex).toString()}'),
+            const SizedBox(height: 8),
+            Text('Customer: ${['Priya Sharma', 'Rahul Kumar', 'Anjali Patel', 'Vikram Singh', 'Meera Reddy'][orderIndex % 5]}'),
+            const SizedBox(height: 8),
+            Text('Amount: ₹${(1200 + (orderIndex * 150)).toStringAsFixed(0)}'),
+            const SizedBox(height: 8),
+            Text('Status: ${['Pending', 'Processing', 'Completed'][orderIndex % 3]}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getTimeAgoFromDateTime(dynamic timeValue) {
+    DateTime dateTime;
+    
+    // Handle both DateTime objects and String timestamps
+    if (timeValue is DateTime) {
+      dateTime = timeValue;
+    } else if (timeValue is String) {
+      try {
+        dateTime = DateTime.parse(timeValue);
+      } catch (e) {
+        // If parsing fails, return a fallback message
+        return 'Recently';
+      }
+    } else {
+      // If it's neither DateTime nor String, return fallback
+      return 'Recently';
+    }
+    
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
   }
 }
 

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/product_provider.dart';
+import '../../providers/wishlist_provider.dart';
+import '../../providers/product_view_provider.dart';
 import 'product_detail_screen.dart';
 
 class ProductCatalogScreen extends StatefulWidget {
@@ -21,89 +24,16 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen>
   String _selectedCategory = 'All';
   String _searchQuery = '';
 
-  // Mock product data
-  List<Map<String, dynamic>> _products = [
-    {
-      'id': '1',
-      'name': 'Men Grey Hoodie',
-      'category': 'Clothing',
-      'price': 49.90,
-      'quantity': 96,
-      'carbonFootprint': 5.2,
-      'image': 'hoodie',
-      'description': 'Eco-friendly cotton hoodie made from sustainable materials',
-      'material': 'Organic Cotton',
-      'color': const Color(0xFFB5C7F7),
-      'icon': Icons.checkroom_rounded,
-    },
-    {
-      'id': '2',
-      'name': 'Women Striped T-Shirt',
-      'category': 'Clothing',
-      'price': 34.90,
-      'quantity': 56,
-      'carbonFootprint': 3.1,
-      'image': 'tshirt',
-      'description': 'Comfortable striped t-shirt made from recycled materials',
-      'material': 'Recycled Polyester',
-      'color': const Color(0xFFE8D5C4),
-      'icon': Icons.checkroom_rounded,
-    },
-    {
-      'id': '3',
-      'name': 'Bamboo Water Bottle',
-      'category': 'Accessories',
-      'price': 29.90,
-      'quantity': 120,
-      'carbonFootprint': 1.8,
-      'image': 'bottle',
-      'description': 'Sustainable bamboo water bottle, perfect for daily use',
-      'material': 'Bamboo',
-      'color': const Color(0xFFF9E79F),
-      'icon': Icons.water_drop_rounded,
-    },
-    {
-      'id': '4',
-      'name': 'Solar Phone Charger',
-      'category': 'Electronics',
-      'price': 89.90,
-      'quantity': 45,
-      'carbonFootprint': 2.5,
-      'image': 'charger',
-      'description': 'Portable solar charger for eco-friendly charging',
-      'material': 'Recycled Plastic',
-      'color': const Color(0xFFD6EAF8),
-      'icon': Icons.solar_power_rounded,
-    },
-    {
-      'id': '5',
-      'name': 'Organic Cotton Tote',
-      'category': 'Accessories',
-      'price': 24.90,
-      'quantity': 200,
-      'carbonFootprint': 1.2,
-      'image': 'tote',
-      'description': 'Reusable shopping bag made from organic cotton',
-      'material': 'Organic Cotton',
-      'color': const Color(0xFFE8D5C4),
-      'icon': Icons.shopping_bag_rounded,
-    },
-    {
-      'id': '6',
-      'name': 'Bamboo Toothbrush',
-      'category': 'Personal Care',
-      'price': 8.90,
-      'quantity': 300,
-      'carbonFootprint': 0.5,
-      'image': 'toothbrush',
-      'description': 'Biodegradable bamboo toothbrush with soft bristles',
-      'material': 'Bamboo',
-      'color': const Color(0xFFF9E79F),
-      'icon': Icons.brush_rounded,
-    },
-  ];
+  // Get products from ProductProvider
+  List<Map<String, dynamic>> get _products {
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    return productProvider.activeProducts;
+  }
 
-  List<String> _categories = ['All', 'Clothing', 'Accessories', 'Electronics', 'Personal Care'];
+  List<String> get _categories {
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    return ['All', ...productProvider.availableCategories];
+  }
 
   @override
   void initState() {
@@ -319,12 +249,12 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen>
                   child: _filteredProducts.isEmpty
                       ? _buildEmptyState()
                       : GridView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 0.75,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
+                            childAspectRatio: 0.85,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
                           ),
                           itemCount: _filteredProducts.length,
                           itemBuilder: (context, index) {
@@ -386,6 +316,10 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen>
   Widget _buildProductCard(Map<String, dynamic> product) {
     return GestureDetector(
       onTap: () {
+        // Track product view
+        final productViewProvider = Provider.of<ProductViewProvider>(context, listen: false);
+        productViewProvider.addProductView(product);
+        
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -396,12 +330,12 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen>
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -410,20 +344,22 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen>
           children: [
             // Product Image Placeholder
             Expanded(
-              flex: 3,
+              flex: 2,
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: product['color'].withOpacity(0.2),
+                  color: product['color'].withOpacity(0.15),
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
                   ),
                 ),
-                child: Icon(
-                  product['icon'],
-                  size: 40,
-                  color: product['color'],
+                child: Center(
+                  child: Icon(
+                    product['icon'],
+                    size: 28,
+                    color: product['color'],
+                  ),
                 ),
               ),
             ),
@@ -432,7 +368,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen>
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -440,36 +376,39 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen>
                       product['name'],
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 13,
                         color: const Color(0xFF22223B),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
-                      '\$${product['price'].toStringAsFixed(2)}',
+                      '₹${product['price'].toStringAsFixed(2)}',
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                        fontSize: 15,
                         color: const Color(0xFFB5C7F7),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Row(
                       children: [
                         Icon(
                           Icons.eco_rounded,
-                          size: 12,
+                          size: 11,
                           color: Colors.green[600],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${product['carbonFootprint']} kg CO₂',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: Colors.green[600],
-                            fontWeight: FontWeight.w500,
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            '${product['carbonFootprint']} kg CO₂',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              color: Colors.green[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

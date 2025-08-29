@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/wishlist_provider.dart';
+import '../../providers/product_view_provider.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -49,6 +51,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
     _fadeController.forward();
     _slideController.forward();
+    
+    // Track product view
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final productViewProvider = Provider.of<ProductViewProvider>(context, listen: false);
+      productViewProvider.addProductView(widget.product);
+    });
   }
 
   @override
@@ -98,72 +106,96 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           opacity: _fadeAnimation,
           child: SlideTransition(
             position: _slideAnimation,
-            child: Column(
-              children: [
+            child: CustomScrollView(
+              slivers: [
                 // Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16.0,
-                    horizontal: 24.0,
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFB5C7F7),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_rounded,
-                            color: Color(0xFF22223B),
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: () {
-                          // TODO: Add to wishlist functionality
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Added to wishlist!',
-                                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                              ),
-                              backgroundColor: const Color(0xFFF9E79F),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16.0,
+                      horizontal: 24.0,
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFB5C7F7),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        },
-                        icon: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9E79F),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.favorite_border_rounded,
-                            color: Color(0xFF22223B),
-                            size: 20,
+                            child: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Color(0xFF22223B),
+                              size: 20,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        const Spacer(),
+                        Consumer<WishlistProvider>(
+                          builder: (context, wishlistProvider, child) {
+                            final isInWishlist = wishlistProvider.isInWishlist(widget.product['id']);
+                            return IconButton(
+                              onPressed: () {
+                                if (isInWishlist) {
+                                  wishlistProvider.removeFromWishlist(widget.product['id']);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Removed from wishlist!',
+                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                      ),
+                                      backgroundColor: Colors.red[300],
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  wishlistProvider.addToWishlist(widget.product);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Added to wishlist!',
+                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                      ),
+                                      backgroundColor: const Color(0xFFF9E79F),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF9E79F),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  isInWishlist ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                  color: isInWishlist ? Colors.red : const Color(0xFF22223B),
+                                  size: 20,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
                 // Product Image
-                Expanded(
-                  flex: 3,
+                SliverToBoxAdapter(
                   child: Container(
+                    height: 200,
                     margin: const EdgeInsets.symmetric(horizontal: 24),
                     decoration: BoxDecoration(
                       color: widget.product['color'].withOpacity(0.2),
@@ -184,11 +216,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 24),
+                ),
 
                 // Product Details
-                Expanded(
-                  flex: 4,
+                SliverToBoxAdapter(
                   child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: const BoxDecoration(
@@ -215,14 +248,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                 ),
                               ),
                             ),
-                            Text(
-                              '\$${widget.product['price'].toStringAsFixed(2)}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFFB5C7F7),
-                              ),
-                            ),
+                                                         Text(
+                               '₹${widget.product['price'].toStringAsFixed(2)}',
+                               style: GoogleFonts.poppins(
+                                 fontSize: 24,
+                                 fontWeight: FontWeight.bold,
+                                 color: const Color(0xFFB5C7F7),
+                               ),
+                             ),
                           ],
                         ),
 
@@ -273,50 +306,55 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
                         const SizedBox(height: 16),
 
+                        // Environmental Impact Section
+                        Text(
+                          'Environmental Impact',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF22223B),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        
                         // Carbon Footprint
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.green.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.eco_rounded,
-                                color: Colors.green[600],
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Carbon Footprint',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF22223B),
-                                      ),
-                                    ),
-                                    Text(
-                                      '${widget.product['carbonFootprint']} kg CO₂',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                        _buildEnvironmentalImpactCard(
+                          'Carbon Footprint',
+                          '${widget.product['carbonFootprint']} kg CO₂',
+                          Icons.eco_rounded,
+                          Colors.green,
+                        ),
+                        
+                        // Water Saved
+                        _buildEnvironmentalImpactCard(
+                          'Water Saved',
+                          '${widget.product['waterSaved']} L',
+                          Icons.water_drop_rounded,
+                          Colors.blue,
+                        ),
+                        
+                        // Energy Saved
+                        _buildEnvironmentalImpactCard(
+                          'Energy Saved',
+                          '${widget.product['energySaved']} kWh',
+                          Icons.electric_bolt_rounded,
+                          Colors.orange,
+                        ),
+                        
+                        // Waste Reduced
+                        _buildEnvironmentalImpactCard(
+                          'Waste Reduced',
+                          '${widget.product['wasteReduced']} kg',
+                          Icons.delete_sweep_rounded,
+                          Colors.purple,
+                        ),
+                        
+                        // Trees Equivalent
+                        _buildEnvironmentalImpactCard(
+                          'Trees Equivalent',
+                          '${widget.product['treesEquivalent']} trees',
+                          Icons.forest_rounded,
+                          Colors.teal,
                         ),
 
                         const SizedBox(height: 16),
@@ -360,7 +398,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                           ),
                         ),
 
-                        const Spacer(),
+                        const SizedBox(height: 24),
 
                         // Quantity Selector
                         Row(
@@ -450,13 +488,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                   size: 24,
                                 ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  'Add to Cart - \$${(_quantity * widget.product['price']).toStringAsFixed(2)}',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                                                                 Text(
+                                   'Add to Cart - ₹${(_quantity * widget.product['price']).toStringAsFixed(2)}',
+                                   style: GoogleFonts.poppins(
+                                     fontSize: 16,
+                                     fontWeight: FontWeight.w600,
+                                   ),
+                                 ),
                               ],
                             ),
                           ),
@@ -469,6 +507,54 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildEnvironmentalImpactCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

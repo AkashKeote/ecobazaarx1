@@ -6,6 +6,7 @@ import 'dart:math';
 import '../../providers/auth_provider.dart';
 import '../../providers/carbon_tracking_provider.dart';
 import '../../providers/store_provider.dart';
+import '../../providers/product_provider.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -25,10 +26,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   double _systemUptime = 99.8;
   
   // Get real active stores count from centralized store data
-  int get _activeStores => StoreProvider.activeStoresCount;
+  int get _activeStores {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    return storeProvider.activeStoresCount;
+  }
   
   // Get total stores count from centralized store data
-  int get _totalStores => StoreProvider.totalStores;
+  int get _totalStores {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    return storeProvider.totalStores;
+  }
   
   // Get real total users count from AuthProvider
   int get _totalUsers => AuthProvider.allUsers.length;
@@ -180,8 +187,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
   
   void _updateStoreAnalytics() {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
     // Update store performance randomly
-    for (var store in StoreProvider.allStores) {
+    for (var store in storeProvider.allStores) {
       // Randomly update performance
       if (Random().nextBool()) {
         store['performance'] = (store['performance'] + (Random().nextDouble() * 0.1 - 0.05)).clamp(0.0, 1.0);
@@ -258,8 +266,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
   
   void _addNewStore() {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
     // Very low probability to add a new store (0.1% chance every 5 seconds)
-    if (Random().nextDouble() < 0.001 && StoreProvider.totalStores < 20) {
+    if (Random().nextDouble() < 0.001 && storeProvider.totalStores < 20) {
       List<String> storeNames = [
         'EcoFresh Market',
         'Green Living Store',
@@ -289,7 +298,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         'description': 'Auto-generated store for analytics.',
       };
       
-      StoreProvider.addStore(newStore);
+      storeProvider.addStore(newStore);
       
       // Add store activity for the new store
       _storeActivities.insert(0, {
@@ -303,6 +312,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
   
   void _addStoreActivity() {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
     List<String> actions = [
       'New order received',
       'Product inventory updated',
@@ -314,7 +324,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       'Customer engagement increased',
     ];
     
-    List<String> storeNames = StoreProvider.allStores.map((store) => store['name'] as String).toList();
+    List<String> storeNames = storeProvider.allStores.map((store) => store['name'] as String).toList();
     List<String> types = ['order', 'inventory', 'review', 'milestone', 'product', 'performance', 'carbon', 'engagement'];
     
     if (_storeActivities.length < 10) {
@@ -516,42 +526,104 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: _PastelActionCard(
-                        icon: Icons.people_rounded,
-                        label: 'Manage Users',
-                        color: const Color(0xFFB5C7F7),
-                        onTap: () => _showUserManagement(context),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _PastelActionCard(
+                            icon: Icons.people_rounded,
+                            label: 'Manage Users',
+                            color: const Color(0xFFB5C7F7),
+                            onTap: () => _showUserManagement(context),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _PastelActionCard(
+                            icon: Icons.store_rounded,
+                            label: 'Store Analytics',
+                            color: const Color(0xFFF9E79F),
+                            onTap: () => _showStoreAnalytics(context),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _PastelActionCard(
-                        icon: Icons.store_rounded,
-                        label: 'Store Analytics',
-                        color: const Color(0xFFF9E79F),
-                        onTap: () => _showStoreAnalytics(context),
-                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _PastelActionCard(
+                            icon: Icons.add_business_rounded,
+                            label: 'Add Store',
+                            color: const Color(0xFFE8D5C4),
+                            onTap: () => _showAddStoreDialog(context),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _PastelActionCard(
+                            icon: Icons.eco_rounded,
+                            label: 'Carbon Reports',
+                            color: const Color(0xFFD6EAF8),
+                            onTap: () => _showCarbonReports(context),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _PastelActionCard(
-                        icon: Icons.storefront_rounded,
-                        label: 'Manage Stores',
-                        color: const Color(0xFFE8D5C4),
-                        onTap: () => _showStoreManagement(context),
-                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Second row of action cards
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _PastelActionCard(
+                            icon: Icons.inventory_rounded,
+                            label: 'Manage Products',
+                            color: const Color(0xFFB5C7F7),
+                            onTap: () => _showProductManagement(context),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _PastelActionCard(
+                            icon: Icons.analytics_rounded,
+                            label: 'Product Analytics',
+                            color: const Color(0xFFF9E79F),
+                            onTap: () => _showProductAnalytics(context),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _PastelActionCard(
-                        icon: Icons.eco_rounded,
-                        label: 'Carbon Reports',
-                        color: const Color(0xFFD6EAF8),
-                        onTap: () => _showCarbonReports(context),
-                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _PastelActionCard(
+                            icon: Icons.category_rounded,
+                            label: 'Categories',
+                            color: const Color(0xFFE8D5C4),
+                            onTap: () => _showCategoryManagement(context),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _PastelActionCard(
+                            icon: Icons.add_box_rounded,
+                            label: 'Add Product',
+                            color: const Color(0xFFD6EAF8),
+                            onTap: () => _showAddProductAdmin(context),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1382,30 +1454,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 child: Column(
                   children: [
                                          // User Statistics Cards
-                     Row(
+                     Column(
                        children: [
-                         Expanded(
-                           child: _buildUserManagementCard('Total Users', '${_getFilteredUsers().length}', Icons.people_rounded, const Color(0xFFB5C7F7), isLive: true),
-                         ),
-                         const SizedBox(width: 16),
-                         Expanded(
-                           child: _buildUserManagementCard('Active Users', '${_getFilteredUsers().where((user) => user['status'] == 'Active').length}', Icons.person_rounded, const Color(0xFFD6EAF8), isLive: true),
-                         ),
+                         _buildUserManagementCard('Total Users', '${_getFilteredUsers().length}', Icons.people_rounded, const Color(0xFFB5C7F7), isLive: true),
+                         const SizedBox(height: 12),
+                         _buildUserManagementCard('Active Users', '${_getFilteredUsers().where((user) => user['status'] == 'Active').length}', Icons.person_rounded, const Color(0xFFD6EAF8), isLive: true),
+                         const SizedBox(height: 12),
+                         _buildUserManagementCard('New Users (Today)', '$_newUsersToday', Icons.person_add_rounded, const Color(0xFFF9E79F), isLive: true),
+                         const SizedBox(height: 12),
+                         _buildUserManagementCard('Premium Users', '${(_totalUsers * 0.15).round()}', Icons.star_rounded, const Color(0xFFE8D5C4), isLive: true),
                        ],
                      ),
-                     
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildUserManagementCard('New Users (Today)', '$_newUsersToday', Icons.person_add_rounded, const Color(0xFFF9E79F), isLive: true),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildUserManagementCard('Premium Users', '${(_totalUsers * 0.15).round()}', Icons.star_rounded, const Color(0xFFE8D5C4), isLive: true),
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 24),
                     
                     // Search and Filter Section
@@ -1453,52 +1512,58 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                              ),
                            ),
                                                      const SizedBox(height: 16),
-                           Row(
+                           Column(
                              children: [
-                               Expanded(
-                                 child: ElevatedButton.icon(
-                                   onPressed: () => _showUserFilterDialog(context),
-                                   icon: const Icon(Icons.filter_list_rounded),
-                                   label: Text('Filter', style: GoogleFonts.poppins()),
-                                   style: ElevatedButton.styleFrom(
-                                     backgroundColor: const Color(0xFFB5C7F7),
-                                     foregroundColor: const Color(0xFF22223B),
+                               Row(
+                                 children: [
+                                   Expanded(
+                                     child: ElevatedButton.icon(
+                                       onPressed: () => _showUserFilterDialog(context),
+                                       icon: const Icon(Icons.filter_list_rounded),
+                                       label: Text('Filter', style: GoogleFonts.poppins()),
+                                       style: ElevatedButton.styleFrom(
+                                         backgroundColor: const Color(0xFFB5C7F7),
+                                         foregroundColor: const Color(0xFF22223B),
+                                       ),
+                                     ),
                                    ),
-                                 ),
+                                   const SizedBox(width: 8),
+                                   Expanded(
+                                     child: ElevatedButton.icon(
+                                       onPressed: () => _showAddUserDialog(context),
+                                       icon: const Icon(Icons.person_add_rounded),
+                                       label: Text('Add User', style: GoogleFonts.poppins()),
+                                       style: ElevatedButton.styleFrom(
+                                         backgroundColor: const Color(0xFFF9E79F),
+                                         foregroundColor: const Color(0xFF22223B),
+                                       ),
+                                     ),
+                                   ),
+                                 ],
                                ),
-                               const SizedBox(width: 8),
-                               if (_currentFilter != 'All' || _searchQuery.isNotEmpty)
-                                 Expanded(
+                               if (_currentFilter != 'All' || _searchQuery.isNotEmpty) ...[
+                                 const SizedBox(height: 8),
+                                 SizedBox(
+                                   width: double.infinity,
                                    child: ElevatedButton.icon(
                                      onPressed: () {
                                        setState(() {
                                          _currentFilter = 'All';
                                          _searchQuery = '';
                                        });
-    ScaffoldMessenger.of(context).showSnackBar(
+                                       ScaffoldMessenger.of(context).showSnackBar(
                                          SnackBar(content: Text('Filters cleared', style: GoogleFonts.poppins())),
                                        );
                                      },
                                      icon: const Icon(Icons.clear_rounded),
-                                     label: Text('Clear', style: GoogleFonts.poppins()),
+                                     label: Text('Clear Filters', style: GoogleFonts.poppins()),
                                      style: ElevatedButton.styleFrom(
                                        backgroundColor: Colors.red[400],
                                        foregroundColor: Colors.white,
                                      ),
                                    ),
                                  ),
-                               const SizedBox(width: 8),
-                               Expanded(
-                                 child: ElevatedButton.icon(
-                                   onPressed: () => _showAddUserDialog(context),
-                                   icon: const Icon(Icons.person_add_rounded),
-                                   label: Text('Add User', style: GoogleFonts.poppins()),
-                                   style: ElevatedButton.styleFrom(
-                                     backgroundColor: const Color(0xFFF9E79F),
-                                     foregroundColor: const Color(0xFF22223B),
-                                   ),
-                                 ),
-                               ),
+                               ],
                              ],
                            ),
                         ],
@@ -1679,21 +1744,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     const SizedBox(height: 24),
                     
                     // Action Buttons
-                    Row(
+                    Column(
                       children: [
-                        Expanded(
+                        SizedBox(
+                          width: double.infinity,
                           child: ElevatedButton.icon(
                             onPressed: () => _showExportDialog(context),
                             icon: const Icon(Icons.download_rounded),
                             label: Text('Export Data', style: GoogleFonts.poppins()),
                             style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFB5C7F7),
+                              backgroundColor: const Color(0xFFB5C7F7),
                               foregroundColor: const Color(0xFF22223B),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
                           child: ElevatedButton.icon(
                             onPressed: () => _showUserAnalyticsDialog(context),
                             icon: const Icon(Icons.analytics_rounded),
@@ -1717,141 +1784,222 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  void _showStoreManagement(BuildContext context) {
+
+
+    void _showStoreManagement(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.9,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF7F6F2),
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(32),
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 16),
-              width: 50,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2.5),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return Consumer<StoreProvider>(
+                                    builder: (context, storeProvider, child) {
+                          print('Admin Consumer rebuilding - Total stores: ${storeProvider.totalStores}');
+                          print('All stores: ${storeProvider.allStores.map((s) => s['name']).join(', ')}');
+                          return Container(
+            height: MediaQuery.of(context).size.height * 0.9,
+            decoration: const BoxDecoration(
+              color: Color(0xFFF7F6F2),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(32),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Text(
-                    'Store Management',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF22223B),
-                    ),
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  width: 50,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2.5),
                   ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
-                    color: Colors.grey[600],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    // Store Statistics
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStoreManagementCard('Total Stores', '$_totalStores', Icons.store_rounded, const Color(0xFFB5C7F7)),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildStoreManagementCard('Active Stores', '$_activeStores', Icons.storefront_rounded, const Color(0xFFD6EAF8)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Action Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showAddStoreDialog(context),
-                            icon: const Icon(Icons.add_business_rounded),
-                            label: Text('Add Store', style: GoogleFonts.poppins()),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFB5C7F7),
-                              foregroundColor: const Color(0xFF22223B),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showStoreFilterDialog(context),
-                            icon: const Icon(Icons.filter_list_rounded),
-                            label: Text('Filter', style: GoogleFonts.poppins()),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF9E79F),
-                              foregroundColor: const Color(0xFF22223B),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Store List
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'All Stores',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF22223B),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                                                     ...StoreProvider.allStores.map((store) => _buildStoreManagementItem(store, context)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                  ],
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Store Management',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF22223B),
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () {
+                          setState(() {}); // Force rebuild
+                        },
+                        icon: const Icon(Icons.refresh_rounded),
+                        color: Colors.grey[600],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                        color: Colors.grey[600],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        // Store Statistics
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStoreManagementCard('Total Stores', '${storeProvider.totalStores}', Icons.store_rounded, const Color(0xFFB5C7F7)),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildStoreManagementCard('Active Stores', '${storeProvider.activeStoresCount}', Icons.storefront_rounded, const Color(0xFFD6EAF8)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Action Buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showAddStoreDialog(context),
+                                icon: const Icon(Icons.add_business_rounded),
+                                label: Text('Add Store', style: GoogleFonts.poppins()),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFB5C7F7),
+                                  foregroundColor: const Color(0xFF22223B),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showStoreFilterDialog(context),
+                                icon: const Icon(Icons.filter_list_rounded),
+                                label: Text('Filter', style: GoogleFonts.poppins()),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF9E79F),
+                                  foregroundColor: const Color(0xFF22223B),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Debug section
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Debug Info',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange[800],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Total Stores: ${storeProvider.totalStores}',
+                                style: GoogleFonts.poppins(fontSize: 12),
+                              ),
+                              Text(
+                                'Store Names: ${storeProvider.allStores.map((s) => s['name']).join(', ')}',
+                                style: GoogleFonts.poppins(fontSize: 12),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton(
+                                onPressed: () {
+                                  print('Admin debug button pressed!');
+                                  print('Current store count before adding: ${storeProvider.totalStores}');
+                                  print('All stores before: ${storeProvider.allStores.map((s) => s['name']).join(', ')}');
+                                  
+                                  final newStore = {
+                                    'name': 'Debug Store ${DateTime.now().millisecondsSinceEpoch}',
+                                    'category': 'Test',
+                                    'status': 'Active',
+                                    'ownerId': 'admin',
+                                    'description': 'Debug store',
+                                  };
+                                  
+                                  storeProvider.addStore(newStore);
+                                  
+                                  print('Store count after adding: ${storeProvider.totalStores}');
+                                  print('All stores after: ${storeProvider.allStores.map((s) => s['name']).join(', ')}');
+                                  
+                                  setState(() {}); // Force rebuild
+                                },
+                                child: const Text('Add Debug Store'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        
+                        // Store List
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'All Stores',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF22223B),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ...storeProvider.allStores.map((store) {
+                                print('Building store item: ${store['name']}');
+                                return _buildStoreManagementItem(store, context);
+                              }),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -1954,26 +2102,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 child: Column(
                   children: [
                                          // Store Statistics Cards
-                     Row(
+                     Column(
                        children: [
-                         Expanded(
-                           child: _buildStoreStatCard('Total Stores', '$_totalStores', Icons.store_rounded, const Color(0xFFB5C7F7)),
+                         _buildStoreStatCard('Total Stores', '$_totalStores', Icons.store_rounded, const Color(0xFFB5C7F7)),
+                         const SizedBox(height: 12),
+                         _buildStoreStatCard('Active Stores', '$_activeStores', Icons.storefront_rounded, const Color(0xFFD6EAF8)),
+                         const SizedBox(height: 12),
+                         Consumer<StoreProvider>(
+                           builder: (context, storeProvider, child) {
+                             return _buildStoreStatCard('Total Products', '${storeProvider.allStores.fold<int>(0, (sum, store) => sum + (store['products'] as int))}', Icons.inventory_rounded, const Color(0xFFF9E79F));
+                           },
                          ),
-                         const SizedBox(width: 16),
-                         Expanded(
-                           child: _buildStoreStatCard('Active Stores', '$_activeStores', Icons.storefront_rounded, const Color(0xFFD6EAF8)),
-                         ),
-                       ],
-                     ),
-                     const SizedBox(height: 16),
-                     Row(
-                       children: [
-                         Expanded(
-                           child: _buildStoreStatCard('Total Products', '${StoreProvider.allStores.fold<int>(0, (sum, store) => sum + (store['products'] as int))}', Icons.inventory_rounded, const Color(0xFFF9E79F)),
-                         ),
-                         const SizedBox(width: 16),
-                         Expanded(
-                           child: _buildStoreStatCard('Avg. Rating', '${(StoreProvider.allStores.fold<double>(0.0, (sum, store) => sum + (store['rating'] as double)) / StoreProvider.totalStores).toStringAsFixed(1)}★', Icons.star_rounded, const Color(0xFFE8D5C4)),
+                         const SizedBox(height: 12),
+                         Consumer<StoreProvider>(
+                           builder: (context, storeProvider, child) {
+                             return _buildStoreStatCard('Avg. Rating', '${(storeProvider.allStores.fold<double>(0.0, (sum, store) => sum + (store['rating'] as double)) / storeProvider.totalStores).toStringAsFixed(1)}★', Icons.star_rounded, const Color(0xFFE8D5C4));
+                           },
                          ),
                        ],
                      ),
@@ -2028,12 +2172,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             ],
                           ),
                           const SizedBox(height: 16),
-                          ...StoreProvider.allStores.map((store) => Column(
-                             children: [
-                              _buildEnhancedStorePerformanceBar(store),
-                               const SizedBox(height: 12),
-                             ],
-                           )).toList(),
+                                                     Consumer<StoreProvider>(
+                             builder: (context, storeProvider, child) {
+                               return Column(
+                                 children: storeProvider.allStores.map((store) => Column(
+                                   children: [
+                                    _buildEnhancedStorePerformanceBar(store),
+                                     const SizedBox(height: 12),
+                                   ],
+                                 )).toList(),
+                               );
+                             },
+                           ),
                         ],
                       ),
                     ),
@@ -2231,16 +2381,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                              ],
                            ),
                            const SizedBox(height: 16),
-                           ...StoreProvider.allStores.take(3).map((store) => _buildEnhancedRealTimeStoreItem(store)),
+                           Consumer<StoreProvider>(
+                             builder: (context, storeProvider, child) {
+                               return Column(
+                                 children: storeProvider.allStores.take(3).map((store) => _buildEnhancedRealTimeStoreItem(store)).toList(),
+                               );
+                             },
+                           ),
                          ],
                        ),
                      ),
                      const SizedBox(height: 24),
                      
                      // Action Buttons
-                     Row(
+                     Column(
                        children: [
-                         Expanded(
+                         SizedBox(
+                           width: double.infinity,
                            child: ElevatedButton.icon(
                              onPressed: () => _showStoreReportDialog(context),
                              icon: const Icon(Icons.assessment_rounded),
@@ -2251,14 +2408,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                              ),
                            ),
                          ),
-                         const SizedBox(width: 16),
-                         Expanded(
+                         const SizedBox(height: 12),
+                         SizedBox(
+                           width: double.infinity,
                            child: ElevatedButton.icon(
-                             onPressed: () => _showStoreApprovalDialog(context),
-                             icon: const Icon(Icons.approval_rounded),
-                             label: Text('Manage Stores', style: GoogleFonts.poppins()),
+                             onPressed: () => _showAddStoreDialog(context),
+                             icon: const Icon(Icons.add_business_rounded),
+                             label: Text('Add Store', style: GoogleFonts.poppins()),
                              style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFF9E79F),
+                               backgroundColor: const Color(0xFFF9E79F),
                                foregroundColor: const Color(0xFF22223B),
                              ),
                            ),
@@ -2516,6 +2674,226 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       SnackBar(
         content: Text('Opening System Settings...', style: GoogleFonts.poppins()),
         backgroundColor: const Color(0xFFE8D5C4),
+      ),
+    );
+  }
+
+  // Product Management Methods
+  void _showProductManagement(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Manage All Products',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+                              child: _buildAdminProductList(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showProductAnalytics(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Product Analytics',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+                              child: _buildProductAnalytics(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCategoryManagement(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Category Management',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _buildCategoryManagement(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddProductAdmin(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Add New Product (Admin)',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.grey[600],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _buildAddProductForm(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -4428,9 +4806,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 20),
             onSelected: (value) {
               switch (value) {
-                case 'edit':
-                  _showEditStoreDialog(context, store);
-                  break;
                 case 'delete':
                   _showDeleteStoreDialog(context, store);
                   break;
@@ -4440,16 +4815,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               }
             },
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    const Icon(Icons.edit_rounded, size: 16, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Text('Edit Store', style: GoogleFonts.poppins(fontSize: 12)),
-                  ],
-                ),
-              ),
+
               PopupMenuItem(
                 value: 'toggle_status',
                 child: Row(
@@ -4477,31 +4843,765 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
+  // Helper methods for enhanced add store dialog
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFFE8D5C4), size: 20),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF22223B),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureCheckbox(String title, String subtitle, bool value, IconData icon, ValueChanged<bool?> onChanged) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: value,
+            onChanged: onChanged,
+            activeColor: const Color(0xFFE8D5C4),
+          ),
+          const SizedBox(width: 12),
+          Icon(icon, color: const Color(0xFFE8D5C4), size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStorePreview(String name, String category, String status, String sustainabilityLevel) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F6F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8D5C4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.preview_rounded, color: const Color(0xFFE8D5C4), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Store Preview',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF22223B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFFE8D5C4),
+                child: Text(
+                  name[0].toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFF22223B),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    Text(
+                      category,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: status == 'Active' ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: status == 'Active' ? Colors.green : Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.eco_rounded, color: Colors.green, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                'Sustainability: $sustainabilityLevel',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.green,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+  void _showStoreManagementDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return Consumer<StoreProvider>(
+            builder: (context, storeProvider, child) {
+              final allStores = storeProvider.allStores;
+              final shopkeeperStores = allStores.where((store) => store['ownerId'] == 'shopkeeper').toList();
+              
+              return Container(
+                height: MediaQuery.of(context).size.height * 0.9,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF7F6F2),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(32),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 16),
+                      width: 50,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.5),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Manage Shopkeeper Stores',
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF22223B),
+                            ),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: () {
+                              setState(() {}); // Force rebuild
+                            },
+                            icon: const Icon(Icons.refresh_rounded),
+                            color: Colors.grey[600],
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close_rounded),
+                            color: Colors.grey[600],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Store Statistics
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildStoreManagementCard(
+                              'Total Stores', 
+                              '${shopkeeperStores.length}', 
+                              Icons.store_rounded, 
+                              const Color(0xFFB5C7F7)
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildStoreManagementCard(
+                              'Active Stores', 
+                              '${shopkeeperStores.where((s) => s['status'] == 'Active').length}', 
+                              Icons.storefront_rounded, 
+                              const Color(0xFFD6EAF8)
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildStoreManagementCard(
+                              'Suspended', 
+                              '${shopkeeperStores.where((s) => s['status'] == 'Suspended').length}', 
+                              Icons.block_rounded, 
+                              Colors.orange
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Store List
+                    Expanded(
+                      child: shopkeeperStores.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.store_rounded,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No Shopkeeper Stores Found',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF22223B),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Shopkeepers haven\'t created any stores yet.',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              itemCount: shopkeeperStores.length,
+                                                             itemBuilder: (context, index) {
+                                 final store = shopkeeperStores[index];
+                                 return _buildShopkeeperStoreManagementItem(store, setState, context);
+                               },
+                            ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildShopkeeperStoreManagementItem(Map<String, dynamic> store, StateSetter setState, BuildContext context) {
+    Color statusColor;
+    IconData statusIcon;
+    
+    switch (store['status']) {
+      case 'Active':
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle_rounded;
+        break;
+      case 'Suspended':
+        statusColor = Colors.orange;
+        statusIcon = Icons.block_rounded;
+        break;
+      case 'Inactive':
+        statusColor = Colors.grey;
+        statusIcon = Icons.pause_circle_rounded;
+        break;
+      default:
+        statusColor = Colors.blue;
+        statusIcon = Icons.info_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFFB5C7F7),
+                child: Text(
+                  store['name'][0].toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFF22223B),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      store['name'],
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    Text(
+                      store['category'] ?? 'No Category',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, color: statusColor, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      store['status'],
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert_rounded),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'activate':
+                      _activateStore(store);
+                      setState(() {});
+                      break;
+                    case 'suspend':
+                      _suspendStore(store);
+                      setState(() {});
+                      break;
+                    case 'deactivate':
+                      _deactivateStore(store);
+                      setState(() {});
+                      break;
+                    case 'delete':
+                      _showDeleteStoreConfirmation(context, store);
+                      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (store['status'] != 'Active')
+                    PopupMenuItem(
+                      value: 'activate',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_rounded, size: 16, color: Colors.green),
+                          const SizedBox(width: 8),
+                          Text('Activate Store', style: GoogleFonts.poppins(fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  if (store['status'] != 'Suspended')
+                    PopupMenuItem(
+                      value: 'suspend',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.block_rounded, size: 16, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          Text('Suspend Store', style: GoogleFonts.poppins(fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  if (store['status'] != 'Inactive')
+                    PopupMenuItem(
+                      value: 'deactivate',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.pause_circle_rounded, size: 16, color: Colors.grey),
+                          const SizedBox(width: 8),
+                          Text('Deactivate Store', style: GoogleFonts.poppins(fontSize: 12)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_rounded, size: 16, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text('Delete Store', style: GoogleFonts.poppins(fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+              ),
+            ],
+          ),
+          if (store['description'] != null && store['description'].toString().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                store['description'],
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _activateStore(Map<String, dynamic> store) {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    storeProvider.updateStore(store['id'], {'status': 'Active'});
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Store "${store['name']}" activated successfully!',
+                style: GoogleFonts.poppins(),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _suspendStore(Map<String, dynamic> store) {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    storeProvider.updateStore(store['id'], {'status': 'Suspended'});
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.block_rounded, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Store "${store['name']}" suspended successfully!',
+                style: GoogleFonts.poppins(),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.orange,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _deactivateStore(Map<String, dynamic> store) {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    storeProvider.updateStore(store['id'], {'status': 'Inactive'});
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.pause_circle_rounded, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Store "${store['name']}" deactivated successfully!',
+                style: GoogleFonts.poppins(),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.grey,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showDeleteStoreConfirmation(BuildContext context, Map<String, dynamic> store) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.delete_rounded, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Text('Delete Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete this store?',
+              style: GoogleFonts.poppins(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Store: ${store['name']}',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  Text(
+                    'Category: ${store['category'] ?? 'No Category'}',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    'Status: ${store['status']}',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '⚠️ This action cannot be undone. All store data will be permanently deleted.',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.red,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+              storeProvider.deleteStore(store['id']);
+              Navigator.pop(context);
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.delete_rounded, color: Colors.white),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Store "${store['name']}" deleted successfully!',
+                          style: GoogleFonts.poppins(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            icon: const Icon(Icons.delete_rounded),
+            label: Text('Delete Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddStoreDialog(BuildContext context) {
+    print('Admin Enhanced Add Store Dialog called!');
+    
+    // Controllers for form fields
     final nameController = TextEditingController();
-    final categoryController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final addressController = TextEditingController();
+    final phoneController = TextEditingController();
+    final emailController = TextEditingController();
+    final websiteController = TextEditingController();
+    
+    // Dropdown selections
     String selectedCategory = 'Food & Beverages';
     String selectedStatus = 'Active';
+    String selectedOwnerType = 'Platform';
+    String selectedSustainabilityLevel = 'High';
+    String selectedVerificationStatus = 'Pending';
+    
+    // Additional settings
+    bool isEcoCertified = false;
+    bool hasDelivery = true;
+    bool hasPickup = true;
+    bool isPremium = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Add New Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Column(
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.add_business_rounded, color: const Color(0xFFE8D5C4), size: 28),
+                const SizedBox(width: 12),
+                Text('Add New Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20)),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
           mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+                  // Basic Information Section
+                  _buildSectionHeader('Basic Information', Icons.store_rounded),
+                  const SizedBox(height: 12),
+                  
             TextField(
               controller: nameController,
               decoration: const InputDecoration(
-                labelText: 'Store Name',
+                      labelText: 'Store Name *',
                 border: OutlineInputBorder(),
+                      hintText: 'Enter store name',
+                      prefixIcon: Icon(Icons.store_rounded),
               ),
+                    textCapitalization: TextCapitalization.words,
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
+                  
+                  TextField(
+                    controller: descriptionController,
               decoration: const InputDecoration(
-                labelText: 'Category',
+                      labelText: 'Store Description',
                 border: OutlineInputBorder(),
+                      hintText: 'Describe the store and its offerings...',
+                      prefixIcon: Icon(Icons.description_rounded),
+                    ),
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Category and Status Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Category *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.category_rounded),
               ),
               value: selectedCategory,
               items: const [
@@ -4510,167 +5610,337 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 DropdownMenuItem(value: 'Electronics', child: Text('Electronics')),
                 DropdownMenuItem(value: 'Home & Garden', child: Text('Home & Garden')),
                 DropdownMenuItem(value: 'Personal Care', child: Text('Personal Care')),
+                            DropdownMenuItem(value: 'Books & Stationery', child: Text('Books & Stationery')),
+                            DropdownMenuItem(value: 'Sports & Fitness', child: Text('Sports & Fitness')),
+                            DropdownMenuItem(value: 'Automotive', child: Text('Automotive')),
+                            DropdownMenuItem(value: 'Health & Wellness', child: Text('Health & Wellness')),
+                            DropdownMenuItem(value: 'Education', child: Text('Education')),
               ],
               onChanged: (value) {
+                            setState(() {
                 selectedCategory = value!;
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
               decoration: const InputDecoration(
                 labelText: 'Status',
                 border: OutlineInputBorder(),
+                             prefixIcon: Icon(Icons.info_rounded),
               ),
               value: selectedStatus,
               items: const [
                 DropdownMenuItem(value: 'Active', child: Text('Active')),
                 DropdownMenuItem(value: 'Inactive', child: Text('Inactive')),
+                            DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+                            DropdownMenuItem(value: 'Suspended', child: Text('Suspended')),
               ],
               onChanged: (value) {
+                            setState(() {
                 selectedStatus = value!;
+                            });
               },
+                        ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.isNotEmpty) {
-                final newStore = {
-                  'name': nameController.text,
-                  'category': selectedCategory,
-                  'status': selectedStatus,
-                  'ownerId': 'admin', // Admin created store
-                  'description': 'A new store added by admin.',
-                };
-                
-                StoreProvider.addStore(newStore);
-                
-                setState(() {
-                  // Refresh the UI
-                });
-                 
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Store "${nameController.text}" added successfully!', style: GoogleFonts.poppins()),
-                    backgroundColor: Colors.green,
+                  const SizedBox(height: 24),
+                  
+                  // Contact Information Section
+                  _buildSectionHeader('Contact Information', Icons.contact_phone_rounded),
+                  const SizedBox(height: 12),
+                  
+                  TextField(
+                    controller: addressController,
+                    decoration: const InputDecoration(
+                      labelText: 'Store Address',
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter store address',
+                      prefixIcon: Icon(Icons.location_on_rounded),
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
                   ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Please enter store name!', style: GoogleFonts.poppins()),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('Add Store'),
+                  const SizedBox(height: 16),
+                  
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: phoneController,
+                          decoration: const InputDecoration(
+                            labelText: 'Phone Number',
+                            border: OutlineInputBorder(),
+                            hintText: '+91 98765 43210',
+                            prefixIcon: Icon(Icons.phone_rounded),
+                          ),
+                          keyboardType: TextInputType.phone,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: emailController,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            border: OutlineInputBorder(),
+                            hintText: 'store@example.com',
+                            prefixIcon: Icon(Icons.email_rounded),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                        ),
           ),
         ],
       ),
-    );
-  }
-
-  void _showEditStoreDialog(BuildContext context, Map<String, dynamic> store) {
-    final nameController = TextEditingController(text: store['name']);
-    String selectedCategory = store['category'];
-    String selectedStatus = store['status'];
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Edit Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 16),
+                  
+                  TextField(
+                    controller: websiteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Website (Optional)',
+                      border: OutlineInputBorder(),
+                      hintText: 'https://www.storewebsite.com',
+                      prefixIcon: Icon(Icons.language_rounded),
+                    ),
+                    keyboardType: TextInputType.url,
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Store Settings Section
+                  _buildSectionHeader('Store Settings', Icons.settings_rounded),
+                  const SizedBox(height: 12),
+                  
+                  Row(
           children: [
-            TextField(
-              controller: nameController,
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
               decoration: const InputDecoration(
-                labelText: 'Store Name',
+                            labelText: 'Owner Type',
                 border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
+                            prefixIcon: Icon(Icons.person_rounded),
+                          ),
+                          value: selectedOwnerType,
+                          items: const [
+                            DropdownMenuItem(value: 'Platform', child: Text('Platform Owned')),
+                            DropdownMenuItem(value: 'Independent', child: Text('Independent Store')),
+                            DropdownMenuItem(value: 'Franchise', child: Text('Franchise')),
+                            DropdownMenuItem(value: 'Partner', child: Text('Partner Store')),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              selectedOwnerType = value!;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
               decoration: const InputDecoration(
-                labelText: 'Category',
+                            labelText: 'Sustainability Level',
                 border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.eco_rounded),
               ),
-              value: selectedCategory,
+                          value: selectedSustainabilityLevel,
               items: const [
-                DropdownMenuItem(value: 'Food & Beverages', child: Text('Food & Beverages')),
-                DropdownMenuItem(value: 'Clothing & Fashion', child: Text('Clothing & Fashion')),
-                DropdownMenuItem(value: 'Electronics', child: Text('Electronics')),
-                DropdownMenuItem(value: 'Home & Garden', child: Text('Home & Garden')),
-                DropdownMenuItem(value: 'Personal Care', child: Text('Personal Care')),
+                            DropdownMenuItem(value: 'High', child: Text('High')),
+                            DropdownMenuItem(value: 'Medium', child: Text('Medium')),
+                            DropdownMenuItem(value: 'Low', child: Text('Low')),
+                            DropdownMenuItem(value: 'Not Rated', child: Text('Not Rated')),
               ],
               onChanged: (value) {
-                selectedCategory = value!;
+                            setState(() {
+                              selectedSustainabilityLevel = value!;
+                            });
               },
+                        ),
+                      ),
+                    ],
             ),
             const SizedBox(height: 16),
+                  
             DropdownButtonFormField<String>(
               decoration: const InputDecoration(
-                labelText: 'Status',
+                      labelText: 'Verification Status',
                 border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.verified_rounded),
               ),
-              value: selectedStatus,
+                    value: selectedVerificationStatus,
               items: const [
-                DropdownMenuItem(value: 'Active', child: Text('Active')),
-                DropdownMenuItem(value: 'Inactive', child: Text('Inactive')),
+                      DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+                      DropdownMenuItem(value: 'Verified', child: Text('Verified')),
+                      DropdownMenuItem(value: 'Rejected', child: Text('Rejected')),
+                      DropdownMenuItem(value: 'Under Review', child: Text('Under Review')),
               ],
               onChanged: (value) {
-                selectedStatus = value!;
-              },
-            ),
-          ],
+                      setState(() {
+                        selectedVerificationStatus = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Features Section
+                  _buildSectionHeader('Store Features', Icons.featured_play_list_rounded),
+                  const SizedBox(height: 12),
+                  
+                  // Checkboxes for features
+                  _buildFeatureCheckbox(
+                    'Eco-Certified Store',
+                    'Store has eco-friendly certification',
+                    isEcoCertified,
+                    Icons.eco_rounded,
+                    (value) {
+                      setState(() {
+                        isEcoCertified = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  _buildFeatureCheckbox(
+                    'Premium Store',
+                    'High-end store with premium features',
+                    isPremium,
+                    Icons.star_rounded,
+                    (value) {
+                      setState(() {
+                        isPremium = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  _buildFeatureCheckbox(
+                    'Home Delivery',
+                    'Store offers home delivery service',
+                    hasDelivery,
+                    Icons.delivery_dining_rounded,
+                    (value) {
+                      setState(() {
+                        hasDelivery = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  _buildFeatureCheckbox(
+                    'Pickup Available',
+                    'Store offers pickup service',
+                    hasPickup,
+                    Icons.storefront_rounded,
+                    (value) {
+                      setState(() {
+                        hasPickup = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Store Preview
+                  if (nameController.text.isNotEmpty)
+                    _buildStorePreview(
+                      nameController.text,
+                      selectedCategory,
+                      selectedStatus,
+                      selectedSustainabilityLevel,
+                    ),
+                ],
+              ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+                child: Text('Cancel', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
           ),
-          ElevatedButton(
+              ElevatedButton.icon(
             onPressed: () {
-              if (nameController.text.isNotEmpty) {
-                StoreProvider.updateStore(store['id'], {
-                  'name': nameController.text,
+                  if (nameController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Please enter a store name!', style: GoogleFonts.poppins()),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  final newStore = {
+                    'name': nameController.text.trim(),
                   'category': selectedCategory,
                   'status': selectedStatus,
-                });
-                
-                setState(() {
-                  // Refresh the UI
-                });
+                    'ownerId': 'admin',
+                    'ownerType': selectedOwnerType,
+                    'description': descriptionController.text.trim().isNotEmpty 
+                        ? descriptionController.text.trim() 
+                        : 'A sustainable store offering eco-friendly products.',
+                    'address': addressController.text.trim(),
+                    'phone': phoneController.text.trim(),
+                    'email': emailController.text.trim(),
+                    'website': websiteController.text.trim(),
+                    'sustainabilityLevel': selectedSustainabilityLevel,
+                    'verificationStatus': selectedVerificationStatus,
+                    'isEcoCertified': isEcoCertified,
+                    'isPremium': isPremium,
+                    'hasDelivery': hasDelivery,
+                    'hasPickup': hasPickup,
+                    'createdAt': DateTime.now().toIso8601String(),
+                    'createdBy': 'admin',
+                    'rating': 0.0,
+                    'totalReviews': 0,
+                    'products': 0,
+                    'ordersToday': 0,
+                    'revenue': 0.0,
+                    'carbonSaved': 0.0,
+                    'performance': 0.0,
+                    'onlineUsers': 0,
+                    'lastOrder': DateTime.now(),
+                    'lastUpdated': DateTime.now(),
+                  };
+
+                  final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+                  storeProvider.addStore(newStore);
                  
                 Navigator.pop(context);
+                  
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Store "${nameController.text}" updated successfully!', style: GoogleFonts.poppins()),
+                      content: Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Colors.white),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Store "${nameController.text.trim()}" added successfully!',
+                              style: GoogleFonts.poppins(),
+                            ),
+                          ),
+                        ],
+                      ),
                     backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Please enter store name!', style: GoogleFonts.poppins()),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text('Update Store'),
-          ),
-        ],
+                      duration: const Duration(seconds: 3),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add_business_rounded),
+                label: Text('Add Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE8D5C4),
+                  foregroundColor: const Color(0xFF22223B),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+
+
 
   void _showDeleteStoreDialog(BuildContext context, Map<String, dynamic> store) {
     showDialog(
@@ -4685,7 +5955,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ),
           ElevatedButton(
             onPressed: () {
-              StoreProvider.deleteStore(store['id']);
+              final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+              storeProvider.deleteStore(store['id']);
               setState(() {
                 // Refresh the UI
               });
@@ -4706,7 +5977,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _toggleStoreStatus(Map<String, dynamic> store) {
-    StoreProvider.toggleStoreStatus(store['id']);
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    storeProvider.toggleStoreStatus(store['id']);
     setState(() {
       // Refresh the UI
     });
@@ -4772,7 +6044,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     // Generate real-time alerts based on store performance
     List<Map<String, dynamic>> alerts = [];
     
-    for (var store in StoreProvider.allStores) {
+    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+    for (var store in storeProvider.allStores) {
       // Performance alerts
       if (store['performance'] < 0.6) {
         alerts.add({
@@ -5262,6 +6535,883 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       ),
     );
   }
+}
+
+// Product Management Helper Methods
+Widget _buildAdminProductList(BuildContext context) {
+  final allProducts = Provider.of<ProductProvider>(context, listen: true).allProducts;
+  
+  if (allProducts.isEmpty) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No products available',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add products to get started!',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  return ListView.builder(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    itemCount: allProducts.length,
+    itemBuilder: (context, index) {
+      final product = allProducts[index];
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: product['color'].withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    product['icon'],
+                    color: product['color'],
+                    size: 30,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product['name'],
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF22223B),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Store: ${product['storeName']}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${product['price'].toStringAsFixed(2)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: product['color'],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'edit':
+                        _showEditProductAdmin(context, product);
+                        break;
+                      case 'delete':
+                        _showDeleteProductDialogAdmin(context, product);
+                        break;
+                                             case 'toggle':
+                         Provider.of<ProductProvider>(context, listen: false).toggleProductStatus(product['id']);
+                         Navigator.pop(context);
+                         ScaffoldMessenger.of(context).showSnackBar(
+                           SnackBar(
+                             content: Text('Product status updated!', style: GoogleFonts.poppins()),
+                             backgroundColor: const Color(0xFFF9E79F),
+                           ),
+                         );
+                         break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, color: const Color(0xFFB5C7F7)),
+                          const SizedBox(width: 8),
+                          Text('Edit', style: GoogleFonts.poppins()),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'toggle',
+                      child: Row(
+                        children: [
+                          Icon(
+                            product['isActive'] == true ? Icons.visibility_off : Icons.visibility,
+                            color: const Color(0xFFF9E79F),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            product['isActive'] == true ? 'Hide' : 'Show',
+                            style: GoogleFonts.poppins(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red),
+                          const SizedBox(width: 8),
+                          Text('Delete', style: GoogleFonts.poppins()),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Icon(
+                    Icons.more_vert,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildProductStat(
+                    'Stock',
+                    '${product['quantity']}',
+                    Icons.inventory_rounded,
+                    const Color(0xFFB5C7F7),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildProductStat(
+                    'Carbon',
+                    '${product['carbonFootprint']} kg',
+                    Icons.eco_rounded,
+                    Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildProductStat(
+                    'Status',
+                    product['isActive'] == true ? 'Active' : 'Hidden',
+                    Icons.circle,
+                    product['isActive'] == true ? Colors.green : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildProductAnalytics(BuildContext context) {
+  final allProducts = Provider.of<ProductProvider>(context, listen: true).allProducts;
+  final totalProducts = allProducts.length;
+  final activeProducts = allProducts.where((p) => p['isActive'] == true).length;
+  final totalValue = allProducts.fold<double>(0, (sum, p) => sum + (p['price'] * p['quantity']));
+  
+  return SingleChildScrollView(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    child: Column(
+      children: [
+        // Analytics Cards
+        Row(
+          children: [
+            Expanded(
+              child: _buildAnalyticsCard(
+                'Total Products',
+                '$totalProducts',
+                Icons.inventory_rounded,
+                const Color(0xFFB5C7F7),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildAnalyticsCard(
+                'Active Products',
+                '$activeProducts',
+                Icons.check_circle_rounded,
+                Colors.green,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildAnalyticsCard(
+                'Total Value',
+                '₹${totalValue.toStringAsFixed(0)}',
+                Icons.attach_money_rounded,
+                const Color(0xFFF9E79F),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildAnalyticsCard(
+                'Categories',
+                '${Provider.of<ProductProvider>(context, listen: false).availableCategories.length}',
+                Icons.category_rounded,
+                const Color(0xFFE8D5C4),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        
+        // Category Distribution
+        Text(
+          'Products by Category',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF22223B),
+          ),
+        ),
+        const SizedBox(height: 16),
+        ...Provider.of<ProductProvider>(context, listen: false).availableCategories.map((category) {
+          final categoryProducts = allProducts.where((p) => p['category'] == category).length;
+          final percentage = totalProducts > 0 ? (categoryProducts / totalProducts * 100) : 0;
+          
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      category,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '$categoryProducts products',
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: percentage / 100,
+                  backgroundColor: Colors.grey[200],
+                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFB5C7F7)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${percentage.toStringAsFixed(1)}%',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ],
+    ),
+  );
+}
+
+Widget _buildCategoryManagement() {
+  return Consumer<ProductProvider>(
+    builder: (context, productProvider, child) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            Text(
+              'Available Categories',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF22223B),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...productProvider.availableCategories.map((category) {
+              final categoryProducts = productProvider.allProducts.where((p) => p['category'] == category).length;
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.category_rounded,
+                      color: const Color(0xFFB5C7F7),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            category,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '$categoryProducts products',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.grey[400],
+                      size: 16,
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildAddProductForm() {
+  final nameController = TextEditingController();
+  final priceController = TextEditingController();
+  final quantityController = TextEditingController();
+  final descriptionController = TextEditingController();
+  
+  String selectedStore = 'admin'; // Admin's store
+  
+  return StatefulBuilder(
+    builder: (context, setState) {
+      String selectedCategory = Provider.of<ProductProvider>(context, listen: false).availableCategories.first;
+      String selectedMaterial = Provider.of<ProductProvider>(context, listen: false).availableMaterials.first;
+      Color selectedColor = Provider.of<ProductProvider>(context, listen: false).availableColors.first;
+      IconData selectedIcon = Provider.of<ProductProvider>(context, listen: false).availableIcons.first;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          
+          // Product Name
+          Text(
+            'Product Name *',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: nameController,
+            decoration: InputDecoration(
+              hintText: 'Enter product name',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Category Selection
+          Text(
+            'Category *',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+            ),
+            child: DropdownButtonFormField<String>(
+              value: selectedCategory,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+              ),
+              items: Provider.of<ProductProvider>(context, listen: false).availableCategories.map((category) {
+                return DropdownMenuItem(
+                  value: category,
+                  child: Text(category),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedCategory = value!;
+                });
+              },
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Price and Quantity Row
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Price (₹) *',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: priceController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: '0.00',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quantity *',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: '0',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Material Selection
+          Text(
+            'Material *',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
+            ),
+            child: DropdownButtonFormField<String>(
+              value: selectedMaterial,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+              ),
+              items: Provider.of<ProductProvider>(context, listen: false).availableMaterials.map((material) {
+                return DropdownMenuItem(
+                  value: material,
+                  child: Text(material),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedMaterial = value!;
+                });
+              },
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Description
+          Text(
+            'Description *',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: descriptionController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Describe your eco-friendly product...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+          
+          // Color and Icon Selection
+          Text(
+            'Product Appearance',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // Color Selection
+          Text(
+            'Choose Color:',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            children: Provider.of<ProductProvider>(context, listen: false).availableColors.map((color) {
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedColor = color;
+                  });
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: selectedColor == color ? Colors.black : Colors.transparent,
+                      width: 3,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Icon Selection
+          Text(
+            'Choose Icon:',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            children: Provider.of<ProductProvider>(context, listen: false).availableIcons.map((icon) {
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedIcon = icon;
+                  });
+                },
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: selectedIcon == icon ? selectedColor.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selectedIcon == icon ? selectedColor : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: selectedIcon == icon ? selectedColor : Colors.grey,
+                    size: 24,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          
+          const SizedBox(height: 30),
+          
+          // Add Product Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                if (nameController.text.isNotEmpty &&
+                    priceController.text.isNotEmpty &&
+                    quantityController.text.isNotEmpty &&
+                    descriptionController.text.isNotEmpty) {
+                  
+                  final newProduct = {
+                    'name': nameController.text,
+                    'category': selectedCategory,
+                    'price': double.tryParse(priceController.text) ?? 0.0,
+                    'quantity': int.tryParse(quantityController.text) ?? 0,
+                    'material': selectedMaterial,
+                    'description': descriptionController.text,
+                    'color': selectedColor,
+                    'icon': selectedIcon,
+                    'storeId': selectedStore,
+                    'storeName': 'Admin Store',
+                  };
+                  
+                  Provider.of<ProductProvider>(context, listen: false).addProduct(newProduct);
+                  
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Product "${nameController.text}" added successfully!',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Please fill all required fields!',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB5C7F7),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Add Product',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+        ],
+      );
+    },
+  );
+}
+
+Widget _buildAnalyticsCard(String title, String value, IconData icon, Color color) {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: color.withOpacity(0.3)),
+    ),
+    child: Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF22223B),
+          ),
+        ),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildProductStat(String label, String value, IconData icon, Color color) {
+  return Column(
+    children: [
+      Icon(icon, color: color, size: 20),
+      const SizedBox(height: 4),
+      Text(
+        value,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFF22223B),
+        ),
+      ),
+      Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          color: Colors.grey[600],
+        ),
+      ),
+    ],
+  );
+}
+
+void _showEditProductAdmin(BuildContext context, Map<String, dynamic> product) {
+  // This would be similar to _buildAddProductForm but with pre-filled values
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text('Edit product feature coming soon!', style: GoogleFonts.poppins()),
+      backgroundColor: const Color(0xFFB5C7F7),
+    ),
+  );
+}
+
+void _showDeleteProductDialogAdmin(BuildContext context, Map<String, dynamic> product) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(
+        'Delete Product',
+        style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+      ),
+      content: Text(
+        'Are you sure you want to delete "${product['name']}"? This action cannot be undone.',
+        style: GoogleFonts.poppins(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel', style: GoogleFonts.poppins()),
+        ),
+        ElevatedButton(
+          onPressed: () {
+                         Provider.of<ProductProvider>(context, listen: false).deleteProduct(product['id']);
+             Navigator.pop(context);
+             Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Product deleted successfully!', style: GoogleFonts.poppins()),
+                backgroundColor: Colors.red,
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: Text('Delete', style: GoogleFonts.poppins(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
 }
 
 class _PastelStatCard extends StatelessWidget {

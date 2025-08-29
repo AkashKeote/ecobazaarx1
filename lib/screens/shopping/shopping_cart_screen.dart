@@ -19,7 +19,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
   late Animation<Offset> _slideAnimation;
 
   // Orders data
-  List<Map<String, dynamic>> _orders = [
+  final List<Map<String, dynamic>> _orders = [
     {
       'id': 'ORD001',
       'product': 'Bamboo Water Bottle',
