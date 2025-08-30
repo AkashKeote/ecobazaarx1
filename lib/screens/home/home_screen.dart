@@ -4751,47 +4751,62 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       {
         'id': 'organic-cotton-tshirt',
         'name': 'Organic Cotton T-Shirt',
-        'price': '₹899',
+        'description': 'Made from 100% organic cotton, this comfortable t-shirt is perfect for everyday wear while being environmentally friendly.',
+        'price': 899.0,
         'discount': '20% OFF',
         'rating': '4.8',
         'color': '#B5C7F7',
         'icon': 'checkroom_rounded',
+        'category': 'Clothing',
+        'carbonFootprint': 2.5,
       },
       {
         'id': 'bamboo-water-bottle',
         'name': 'Bamboo Water Bottle',
-        'price': '₹599',
+        'description': 'Sustainable bamboo water bottle that keeps your drinks cold for hours while reducing plastic waste.',
+        'price': 599.0,
         'discount': '15% OFF',
         'rating': '4.9',
         'color': '#D6EAF8',
         'icon': 'water_drop_rounded',
+        'category': 'Kitchen',
+        'carbonFootprint': 1.8,
       },
       {
         'id': 'reusable-shopping-bag',
         'name': 'Reusable Shopping Bag',
-        'price': '₹299',
+        'description': 'Durable and stylish reusable shopping bag made from recycled materials.',
+        'price': 299.0,
         'discount': 'NEW',
         'rating': '4.7',
         'color': '#E8D5C4',
         'icon': 'shopping_bag_rounded',
+        'category': 'Lifestyle',
+        'carbonFootprint': 0.5,
       },
       {
         'id': 'eco-friendly-soap',
         'name': 'Eco-Friendly Soap',
-        'price': '₹199',
+        'description': 'Natural soap bar made with organic ingredients and packaged in biodegradable materials.',
+        'price': 199.0,
         'discount': '25% OFF',
         'rating': '4.6',
         'color': '#F9E79F',
         'icon': 'spa_rounded',
+        'category': 'Personal Care',
+        'carbonFootprint': 0.3,
       },
       {
         'id': 'solar-phone-charger',
         'name': 'Solar Phone Charger',
-        'price': '₹1299',
+        'description': 'Portable solar charger that harnesses renewable energy to charge your devices on the go.',
+        'price': 1299.0,
         'discount': 'HOT',
         'rating': '4.9',
         'color': '#B5C7F7',
         'icon': 'solar_power_rounded',
+        'category': 'Electronics',
+        'carbonFootprint': 1.2,
       },
     ];
 
@@ -4853,6 +4868,100 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                       ),
                     ),
+                    // Wishlist button
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Consumer2<WishlistProvider, AuthProvider>(
+                        builder: (context, wishlistProvider, authProvider, child) {
+                          final isInWishlist = wishlistProvider.isInWishlist(product['id']);
+                          final currentUserId = authProvider.firebaseUser?.uid;
+                          
+                          return GestureDetector(
+                            onTap: () async {
+                              if (currentUserId == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Please login to manage wishlist',
+                                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                    ),
+                                    backgroundColor: Colors.orange[300],
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (isInWishlist) {
+                                final success = await wishlistProvider.removeFromWishlist(
+                                  userId: currentUserId,
+                                  productId: product['id'],
+                                );
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Removed from wishlist',
+                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                      ),
+                                      backgroundColor: Colors.red[300],
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                final success = await wishlistProvider.addToWishlist(
+                                  userId: currentUserId,
+                                  productId: product['id'],
+                                  productName: product['name'] ?? 'Unknown Product',
+                                  productDescription: product['description'] ?? 'Eco-friendly product',
+                                  productPrice: product['price'] ?? 0.0,
+                                  productCategory: product['category'] ?? 'General',
+                                  productColor: product['color'] ?? '#B5C7F7',
+                                  productIcon: product['icon'] ?? 'eco_rounded',
+                                  carbonFootprint: product['carbonFootprint'] ?? 0.0,
+                                  productImage: '',
+                                );
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Added to wishlist',
+                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                      ),
+                                      backgroundColor: Colors.green[300],
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                isInWishlist ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                color: isInWishlist ? Colors.red : Colors.grey[600],
+                                size: 16,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -4902,7 +5011,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                           const SizedBox(width: 1),
                           Text(
-                            'Eco',
+                            '${product['carbonFootprint']?.toStringAsFixed(1) ?? '0.0'} kg CO₂',
                             style: GoogleFonts.poppins(
                               fontSize: 7,
                               color: Colors.green[600],
@@ -4916,37 +5025,79 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            product['price'] ?? '₹0',
+                            '₹${(product['price'] ?? 0.0).toStringAsFixed(0)}',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                               color: _parseColor(product['color']),
                             ),
                           ),
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  final cartProvider = Provider.of<CartProvider>(context, listen: false);
-                                  cartProvider.addItem(
-                                    productId: product['id'] ?? 'unknown',
-                                    name: product['name'] ?? 'Unknown Product',
-                                    description: product['description'] ?? 'Eco-friendly product',
-                                    price: _parsePrice(product['price']),
-                                    icon: _getIconFromString(product['icon']),
-                                    color: _parseColor(product['color']),
-                                    category: product['category'] ?? 'General',
-                                    carbonFootprint: _parseDouble(product['carbonFootprint']),
-                                  );
-                                  _showSnackBar('Added to cart');
-                                },
-                                child: Icon(
-                                  Icons.add_shopping_cart_rounded,
-                                  color: _parseColor(product['color']),
-                                  size: 18,
-                                ),
-                              ),
-                            ],
+                          Consumer<CartProvider>(
+                            builder: (context, cartProvider, child) {
+                              final quantity = cartProvider.getQuantity(product['id']);
+                              
+                              return Row(
+                                children: [
+                                  if (quantity > 0) ...[
+                                    GestureDetector(
+                                      onTap: () {
+                                        cartProvider.removeSingleItem(product['id']);
+                                        _showSnackBar('Removed from cart');
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: _parseColor(product['color']).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Icon(
+                                          Icons.remove_rounded,
+                                          color: _parseColor(product['color']),
+                                          size: 14,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '$quantity',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: _parseColor(product['color']),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  GestureDetector(
+                                    onTap: () {
+                                      cartProvider.addItem(
+                                        productId: product['id'] ?? 'unknown',
+                                        name: product['name'] ?? 'Unknown Product',
+                                        description: product['description'] ?? 'Eco-friendly product',
+                                        price: product['price'] ?? 0.0,
+                                        icon: _getIconFromString(product['icon']),
+                                        color: _parseColor(product['color']),
+                                        category: product['category'] ?? 'General',
+                                        carbonFootprint: product['carbonFootprint'] ?? 0.0,
+                                      );
+                                      _showSnackBar('Added to cart');
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        color: _parseColor(product['color']).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Icon(
+                                        quantity > 0 ? Icons.add_rounded : Icons.add_shopping_cart_rounded,
+                                        color: _parseColor(product['color']),
+                                        size: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -6397,72 +6548,139 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () {
-              // Ensure all required fields have safe fallback values
-              final productId = item['productId']?.toString() ?? 'unknown';
-              final productName = item['productName']?.toString() ?? 'Unknown Product';
-              final productDescription = item['productDescription']?.toString() ?? 'Eco-friendly product';
-              final productCategory = item['productCategory']?.toString() ?? 'General';
+          // Cart functionality
+          Consumer<CartProvider>(
+            builder: (context, cartProvider, child) {
+              final quantity = cartProvider.getQuantity(item['productId']);
               
-              // Safely handle color and icon
-              String productColor;
-              if (item['productColor'] is String) {
-                productColor = item['productColor'];
-              } else {
-                productColor = _colorToString(_parseColor(item['productColor']));
-              }
-              
-              String productIcon;
-              if (item['productIcon'] is String) {
-                productIcon = item['productIcon'];
-              } else {
-                productIcon = _iconToString(_getIconFromString(item['productIcon']));
-              }
-              
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProductDetailScreen(product: {
-                    'id': productId,
-                    'name': productName,
-                    'description': productDescription,
-                    'price': _parseDouble(item['productPrice']),
-                    'color': productColor,
-                    'icon': productIcon,
-                    'category': productCategory,
-                    'carbonFootprint': _parseDouble(item['carbonFootprint']),
-                    'waterSaved': _parseDouble(item['waterSaved']),
-                    'energySaved': _parseDouble(item['energySaved']),
-                    'wasteReduced': _parseDouble(item['wasteReduced']),
-                    'treesEquivalent': _parseDouble(item['treesEquivalent']),
-                    'material': item['material']?.toString() ?? 'Eco-friendly material',
-                    'rating': _parseDouble(item['rating']),
-                    'quantity': _parseDouble(item['quantity']),
-                  }),
-                ),
+              return Row(
+                children: [
+                  if (quantity > 0) ...[
+                    GestureDetector(
+                      onTap: () {
+                        cartProvider.removeSingleItem(item['productId']);
+                        _showSnackBar('Removed from cart');
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: _parseColor(item['productColor']).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Icon(
+                          Icons.remove_rounded,
+                          color: _parseColor(item['productColor']),
+                          size: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$quantity',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _parseColor(item['productColor']),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  GestureDetector(
+                    onTap: () {
+                      cartProvider.addItem(
+                        productId: item['productId'] ?? 'unknown',
+                        name: item['productName'] ?? 'Unknown Product',
+                        description: item['productDescription'] ?? 'Eco-friendly product',
+                        price: _parseDouble(item['productPrice']),
+                        icon: _getIconFromString(item['productIcon']),
+                        color: _parseColor(item['productColor']),
+                        category: item['productCategory'] ?? 'General',
+                        carbonFootprint: _parseDouble(item['carbonFootprint']),
+                      );
+                      _showSnackBar('Added to cart');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: _parseColor(item['productColor']).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Icon(
+                        quantity > 0 ? Icons.add_rounded : Icons.add_shopping_cart_rounded,
+                        color: _parseColor(item['productColor']),
+                        size: 14,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      // Ensure all required fields have safe fallback values
+                      final productId = item['productId']?.toString() ?? 'unknown';
+                      final productName = item['productName']?.toString() ?? 'Unknown Product';
+                      final productDescription = item['productDescription']?.toString() ?? 'Eco-friendly product';
+                      final productCategory = item['productCategory']?.toString() ?? 'General';
+                      
+                      // Safely handle color and icon
+                      String productColor;
+                      if (item['productColor'] is String) {
+                        productColor = item['productColor'];
+                      } else {
+                        productColor = _colorToString(_parseColor(item['productColor']));
+                      }
+                      
+                      String productIcon;
+                      if (item['productIcon'] is String) {
+                        productIcon = item['productIcon'];
+                      } else {
+                        productIcon = _iconToString(_getIconFromString(item['productIcon']));
+                      }
+                      
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProductDetailScreen(product: {
+                            'id': productId,
+                            'name': productName,
+                            'description': productDescription,
+                            'price': _parseDouble(item['productPrice']),
+                            'color': productColor,
+                            'icon': productIcon,
+                            'category': productCategory,
+                            'carbonFootprint': _parseDouble(item['carbonFootprint']),
+                            'waterSaved': _parseDouble(item['waterSaved']),
+                            'energySaved': _parseDouble(item['energySaved']),
+                            'wasteReduced': _parseDouble(item['wasteReduced']),
+                            'treesEquivalent': _parseDouble(item['treesEquivalent']),
+                            'material': item['material']?.toString() ?? 'Eco-friendly material',
+                            'rating': _parseDouble(item['rating']),
+                            'quantity': _parseDouble(item['quantity']),
+                          }),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _parseColor(item['productColor']).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: _parseColor(item['productColor']).withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'Details',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: _parseColor(item['productColor']),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: _parseColor(item['productColor']).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _parseColor(item['productColor']).withOpacity(0.3),
-                ),
-              ),
-              child: Text(
-                'View Details',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: _parseColor(item['productColor']),
-                ),
-              ),
-            ),
           ),
         ],
       ),

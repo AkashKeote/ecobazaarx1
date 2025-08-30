@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
   // Notification Settings
@@ -31,34 +32,89 @@ class SettingsProvider extends ChangeNotifier {
   bool get autoSaveEnabled => _autoSaveEnabled;
   bool get hapticFeedbackEnabled => _hapticFeedbackEnabled;
 
+  SettingsProvider() {
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      _pushNotificationsEnabled = prefs.getBool('pushNotificationsEnabled') ?? true;
+      _orderNotificationsEnabled = prefs.getBool('orderNotificationsEnabled') ?? true;
+      _ecoTipsEnabled = prefs.getBool('ecoTipsEnabled') ?? true;
+      _promotionalNotificationsEnabled = prefs.getBool('promotionalNotificationsEnabled') ?? true;
+      _carbonTrackingEnabled = prefs.getBool('carbonTrackingEnabled') ?? true;
+      
+      _locationEnabled = prefs.getBool('locationEnabled') ?? true;
+      _dataCollectionEnabled = prefs.getBool('dataCollectionEnabled') ?? true;
+      _biometricEnabled = prefs.getBool('biometricEnabled') ?? false;
+      
+      _darkModeEnabled = prefs.getBool('darkModeEnabled') ?? false;
+      _autoSaveEnabled = prefs.getBool('autoSaveEnabled') ?? true;
+      _hapticFeedbackEnabled = prefs.getBool('hapticFeedbackEnabled') ?? true;
+      
+      notifyListeners();
+    } catch (e) {
+      print('Error loading settings: $e');
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      await prefs.setBool('pushNotificationsEnabled', _pushNotificationsEnabled);
+      await prefs.setBool('orderNotificationsEnabled', _orderNotificationsEnabled);
+      await prefs.setBool('ecoTipsEnabled', _ecoTipsEnabled);
+      await prefs.setBool('promotionalNotificationsEnabled', _promotionalNotificationsEnabled);
+      await prefs.setBool('carbonTrackingEnabled', _carbonTrackingEnabled);
+      
+      await prefs.setBool('locationEnabled', _locationEnabled);
+      await prefs.setBool('dataCollectionEnabled', _dataCollectionEnabled);
+      await prefs.setBool('biometricEnabled', _biometricEnabled);
+      
+      await prefs.setBool('darkModeEnabled', _darkModeEnabled);
+      await prefs.setBool('autoSaveEnabled', _autoSaveEnabled);
+      await prefs.setBool('hapticFeedbackEnabled', _hapticFeedbackEnabled);
+    } catch (e) {
+      print('Error saving settings: $e');
+    }
+  }
+
   // Notification Settings Methods
   void setPushNotifications(bool value) {
     _pushNotificationsEnabled = value;
     print('Push notifications: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
   void setOrderNotifications(bool value) {
     _orderNotificationsEnabled = value;
     print('Order notifications: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
   void setEcoTips(bool value) {
     _ecoTipsEnabled = value;
     print('Eco tips: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
   void setPromotionalNotifications(bool value) {
     _promotionalNotificationsEnabled = value;
     print('Promotional notifications: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
   void setCarbonTracking(bool value) {
     _carbonTrackingEnabled = value;
     print('Carbon tracking notifications: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
@@ -66,18 +122,21 @@ class SettingsProvider extends ChangeNotifier {
   void setLocationEnabled(bool value) {
     _locationEnabled = value;
     print('Location services: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
   void setDataCollection(bool value) {
     _dataCollectionEnabled = value;
     print('Data collection: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
   void setBiometricEnabled(bool value) {
     _biometricEnabled = value;
     print('Biometric login: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
@@ -85,18 +144,21 @@ class SettingsProvider extends ChangeNotifier {
   void setDarkMode(bool value) {
     _darkModeEnabled = value;
     print('Dark mode: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
   void setAutoSave(bool value) {
     _autoSaveEnabled = value;
     print('Auto-save: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
   void setHapticFeedback(bool value) {
     _hapticFeedbackEnabled = value;
     print('Haptic feedback: ${value ? 'enabled' : 'disabled'}');
+    _saveSettings();
     notifyListeners();
   }
 
@@ -117,6 +179,7 @@ class SettingsProvider extends ChangeNotifier {
     _promotionalNotificationsEnabled = false;
     _carbonTrackingEnabled = false;
     print('All notifications disabled');
+    _saveSettings();
     notifyListeners();
   }
 
@@ -128,6 +191,7 @@ class SettingsProvider extends ChangeNotifier {
     _promotionalNotificationsEnabled = true;
     _carbonTrackingEnabled = true;
     print('All notifications enabled');
+    _saveSettings();
     notifyListeners();
   }
 
@@ -145,6 +209,7 @@ class SettingsProvider extends ChangeNotifier {
     _autoSaveEnabled = true;
     _hapticFeedbackEnabled = true;
     print('Settings reset to defaults');
+    _saveSettings();
     notifyListeners();
   }
 
@@ -169,5 +234,54 @@ class SettingsProvider extends ChangeNotifier {
         'haptic_feedback': _hapticFeedbackEnabled,
       },
     };
+  }
+
+  // Export settings for backup
+  Map<String, dynamic> exportSettings() {
+    return {
+      'version': '1.0.0',
+      'exported_at': DateTime.now().toIso8601String(),
+      'settings': getSettingsSummary(),
+    };
+  }
+
+  // Import settings from backup
+  Future<bool> importSettings(Map<String, dynamic> data) async {
+    try {
+      if (data['version'] != '1.0.0') {
+        print('Unsupported settings version');
+        return false;
+      }
+
+      final settings = data['settings'] as Map<String, dynamic>;
+      
+      // Import notification settings
+      final notifications = settings['notifications'] as Map<String, dynamic>;
+      _pushNotificationsEnabled = notifications['push'] ?? true;
+      _orderNotificationsEnabled = notifications['orders'] ?? true;
+      _ecoTipsEnabled = notifications['eco_tips'] ?? true;
+      _promotionalNotificationsEnabled = notifications['promotional'] ?? true;
+      _carbonTrackingEnabled = notifications['carbon_tracking'] ?? true;
+
+      // Import privacy settings
+      final privacy = settings['privacy'] as Map<String, dynamic>;
+      _locationEnabled = privacy['location'] ?? true;
+      _dataCollectionEnabled = privacy['data_collection'] ?? true;
+      _biometricEnabled = privacy['biometric'] ?? false;
+
+      // Import app preferences
+      final preferences = settings['preferences'] as Map<String, dynamic>;
+      _darkModeEnabled = preferences['dark_mode'] ?? false;
+      _autoSaveEnabled = preferences['auto_save'] ?? true;
+      _hapticFeedbackEnabled = preferences['haptic_feedback'] ?? true;
+
+      await _saveSettings();
+      notifyListeners();
+      print('Settings imported successfully');
+      return true;
+    } catch (e) {
+      print('Error importing settings: $e');
+      return false;
+    }
   }
 }

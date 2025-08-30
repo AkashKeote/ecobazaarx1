@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/auth_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,6 +14,32 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  bool _isEditingProfile = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    _nameController.text = authProvider.userName ?? '';
+    // You can add phone and address loading here when implemented
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,6 +132,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildProfileCard() {
+    final authProvider = Provider.of<AuthProvider>(context);
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -116,61 +147,254 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: const Color(0xFFB5C7F7),
-            child: Text(
-              'AK',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Akash Kumar',
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: const Color(0xFFB5C7F7),
+                child: Text(
+                  _getInitials(authProvider.userName ?? 'User'),
                   style: GoogleFonts.poppins(
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF22223B),
+                    color: Colors.white,
                   ),
                 ),
-                Text(
-                  'akash@example.com',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      authProvider.userName ?? 'User',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    Text(
+                      authProvider.userEmail ?? 'user@example.com',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${authProvider.getRoleDisplayName(authProvider.userRole ?? UserRole.customer)} • 1250 Points',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: const Color(0xFFB5C7F7),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Eco Warrior • 1250 Points',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: const Color(0xFFB5C7F7),
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _isEditingProfile = !_isEditingProfile;
+                  });
+                },
+                icon: Icon(
+                  _isEditingProfile ? Icons.close_rounded : Icons.edit_rounded,
+                  color: const Color(0xFFB5C7F7),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          IconButton(
-            onPressed: () {
-              // Edit profile functionality
-            },
-            icon: const Icon(Icons.edit_rounded, color: Color(0xFFB5C7F7)),
-          ),
+          if (_isEditingProfile) ...[
+            const SizedBox(height: 20),
+            _buildProfileEditForm(),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _buildProfileEditForm() {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: TextField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              labelText: 'Full Name',
+              labelStyle: GoogleFonts.poppins(color: Colors.grey[600]),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(16),
+              prefixIcon: const Icon(Icons.person_rounded, color: Color(0xFFB5C7F7)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: TextField(
+            controller: _phoneController,
+            decoration: InputDecoration(
+              labelText: 'Phone Number',
+              labelStyle: GoogleFonts.poppins(color: Colors.grey[600]),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(16),
+              prefixIcon: const Icon(Icons.phone_rounded, color: Color(0xFFB5C7F7)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: TextField(
+            controller: _addressController,
+            maxLines: 2,
+            decoration: InputDecoration(
+              labelText: 'Address',
+              labelStyle: GoogleFonts.poppins(color: Colors.grey[600]),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(16),
+              prefixIcon: const Icon(Icons.location_on_rounded, color: Color(0xFFB5C7F7)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _saveProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFB5C7F7),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        'Save Changes',
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _cancelEdit,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.grey[600],
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'U';
+    final parts = name.split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
+  Future<void> _saveProfile() async {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your name'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final result = await authProvider.updateProfile(
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+      );
+
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {
+          _isEditingProfile = false;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _cancelEdit() {
+    _loadUserData();
+    setState(() {
+      _isEditingProfile = false;
+    });
   }
 
   Widget _buildNotificationSettings(SettingsProvider provider) {
@@ -226,6 +450,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Icons.trending_up_rounded,
             provider.carbonTrackingEnabled,
             (value) => provider.setCarbonTracking(value),
+          ),
+          _buildDivider(),
+          _buildActionTile(
+            provider.anyNotificationsEnabled ? 'Disable All' : 'Enable All',
+            provider.anyNotificationsEnabled 
+                ? 'Turn off all notifications'
+                : 'Turn on all notifications',
+            provider.anyNotificationsEnabled 
+                ? Icons.notifications_off_rounded
+                : Icons.notifications_active_rounded,
+            () {
+              if (provider.anyNotificationsEnabled) {
+                provider.disableAllNotifications();
+              } else {
+                provider.enableAllNotifications();
+              }
+            },
           ),
         ],
       ),
@@ -313,6 +554,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             provider.hapticFeedbackEnabled,
             (value) => provider.setHapticFeedback(value),
           ),
+          _buildDivider(),
+          _buildActionTile(
+            'Reset to Defaults',
+            'Restore all settings to their default values',
+            Icons.restore_rounded,
+            () => _showResetConfirmation(provider),
+          ),
         ],
       ),
     );
@@ -337,36 +585,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'Help Center',
             'Find answers to common questions',
             Icons.help_center_rounded,
-            () {
-              // Navigate to help center
-            },
+            () => _launchUrl('https://ecobazaarx.com/help'),
           ),
           _buildDivider(),
           _buildActionTile(
             'Contact Support',
             'Get in touch with our support team',
             Icons.support_agent_rounded,
-            () {
-              // Contact support
-            },
+            () => _launchUrl('mailto:support@ecobazaarx.com'),
           ),
           _buildDivider(),
           _buildActionTile(
             'Report a Bug',
             'Help us improve by reporting issues',
             Icons.bug_report_rounded,
-            () {
-              // Report bug
-            },
+            () => _launchUrl('mailto:bugs@ecobazaarx.com?subject=Bug Report'),
           ),
           _buildDivider(),
           _buildActionTile(
             'Feature Request',
             'Suggest new features for the app',
             Icons.lightbulb_rounded,
-            () {
-              // Feature request
-            },
+            () => _launchUrl('mailto:features@ecobazaarx.com?subject=Feature Request'),
+          ),
+          _buildDivider(),
+          _buildActionTile(
+            'Rate the App',
+            'Share your experience on the app store',
+            Icons.star_rounded,
+            () => _launchUrl('https://play.google.com/store/apps/details?id=com.ecobazaarx.app'),
           ),
         ],
       ),
@@ -392,36 +639,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'App Version',
             'EcoBazaarX v1.0.0',
             Icons.info_rounded,
-            () {
-              // Show version info
-            },
+            () => _showVersionInfo(),
           ),
           _buildDivider(),
           _buildActionTile(
             'Terms of Service',
             'Read our terms and conditions',
             Icons.description_rounded,
-            () {
-              // Show terms
-            },
+            () => _launchUrl('https://ecobazaarx.com/terms'),
           ),
           _buildDivider(),
           _buildActionTile(
             'Privacy Policy',
             'Learn how we protect your data',
             Icons.privacy_tip_rounded,
-            () {
-              // Show privacy policy
-            },
+            () => _launchUrl('https://ecobazaarx.com/privacy'),
           ),
           _buildDivider(),
           _buildActionTile(
             'Open Source Licenses',
             'View third-party libraries used',
             Icons.code_rounded,
-            () {
-              // Show licenses
-            },
+            () => _showLicenses(),
+          ),
+          _buildDivider(),
+          _buildActionTile(
+            'Follow Us',
+            'Stay updated on social media',
+            Icons.share_rounded,
+            () => _showSocialMediaOptions(),
           ),
         ],
       ),
@@ -578,10 +824,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // Navigate to login screen
-              Navigator.pushReplacementNamed(context, '/login');
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              await authProvider.logout();
+              if (mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -592,5 +841,184 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  void _showResetConfirmation(SettingsProvider provider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Reset Settings',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF22223B),
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to reset all settings to their default values?',
+          style: GoogleFonts.poppins(
+            color: Colors.grey[700],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              provider.resetToDefaults();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Settings reset to defaults'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFB5C7F7),
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Reset', style: GoogleFonts.poppins()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showVersionInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'App Version',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF22223B),
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'EcoBazaarX v1.0.0',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Build: 1.0.0+1',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Released: December 2024',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(color: const Color(0xFFB5C7F7)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLicenses() {
+    showLicensePage(
+      context: context,
+      applicationName: 'EcoBazaarX',
+      applicationVersion: '1.0.0',
+      applicationLegalese: '© 2024 EcoBazaarX. All rights reserved.',
+    );
+  }
+
+  void _showSocialMediaOptions() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Follow Us',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF22223B),
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSocialMediaTile('Facebook', Icons.facebook, () => _launchUrl('https://facebook.com/ecobazaarx')),
+            _buildSocialMediaTile('Twitter', Icons.flutter_dash, () => _launchUrl('https://twitter.com/ecobazaarx')),
+            _buildSocialMediaTile('Instagram', Icons.camera_alt, () => _launchUrl('https://instagram.com/ecobazaarx')),
+            _buildSocialMediaTile('LinkedIn', Icons.business, () => _launchUrl('https://linkedin.com/company/ecobazaarx')),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSocialMediaTile(String title, IconData icon, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFB5C7F7)),
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+      ),
+      onTap: () {
+        Navigator.pop(context);
+        onTap();
+      },
+    );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open $url'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening link: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
