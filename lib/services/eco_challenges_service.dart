@@ -2,61 +2,207 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 
+class EcoChallengeData {
+  final String id;
+  final String title;
+  final String description;
+  final String reward;
+  final String colorHex;
+  final String iconName;
+  final int targetValue;
+  final String targetUnit;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String category;
+  final bool isActive;
+  final bool isCompleted;
+  final int currentProgress;
+  final double progressPercentage;
+  final String createdBy;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+
+  EcoChallengeData({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.reward,
+    required this.colorHex,
+    required this.iconName,
+    required this.targetValue,
+    required this.targetUnit,
+    required this.startDate,
+    required this.endDate,
+    required this.category,
+    this.isActive = true,
+    this.isCompleted = false,
+    this.currentProgress = 0,
+    this.progressPercentage = 0.0,
+    required this.createdBy,
+    required this.createdAt,
+    this.updatedAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'reward': reward,
+      'colorHex': colorHex,
+      'iconName': iconName,
+      'targetValue': targetValue,
+      'targetUnit': targetUnit,
+      'startDate': startDate,
+      'endDate': endDate,
+      'category': category,
+      'isActive': isActive,
+      'isCompleted': isCompleted,
+      'currentProgress': currentProgress,
+      'progressPercentage': progressPercentage,
+      'createdBy': createdBy,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt ?? DateTime.now(),
+    };
+  }
+
+  factory EcoChallengeData.fromMap(Map<String, dynamic> map) {
+    return EcoChallengeData(
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      reward: map['reward'] ?? '',
+      colorHex: map['colorHex'] ?? '#B5C7F7',
+      iconName: map['iconName'] ?? 'eco_rounded',
+      targetValue: map['targetValue'] ?? 0,
+      targetUnit: map['targetUnit'] ?? '',
+      startDate: _parseDateTime(map['startDate']),
+      endDate: _parseDateTime(map['endDate']),
+      category: map['category'] ?? '',
+      isActive: map['isActive'] ?? true,
+      isCompleted: map['isCompleted'] ?? false,
+      currentProgress: map['currentProgress'] ?? 0,
+      progressPercentage: (map['progressPercentage'] ?? 0.0).toDouble(),
+      createdBy: map['createdBy'] ?? '',
+      createdAt: _parseDateTime(map['createdAt']),
+      updatedAt: _parseDateTime(map['updatedAt']),
+    );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is DateTime) return value;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+}
+
+class UserChallengeProgress {
+  final String userId;
+  final String challengeId;
+  final int currentProgress;
+  final double progressPercentage;
+  final bool isCompleted;
+  final DateTime? completedAt;
+  final DateTime lastUpdated;
+
+  UserChallengeProgress({
+    required this.userId,
+    required this.challengeId,
+    this.currentProgress = 0,
+    this.progressPercentage = 0.0,
+    this.isCompleted = false,
+    this.completedAt,
+    required this.lastUpdated,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'challengeId': challengeId,
+      'currentProgress': currentProgress,
+      'progressPercentage': progressPercentage,
+      'isCompleted': isCompleted,
+      'completedAt': completedAt,
+      'lastUpdated': lastUpdated,
+    };
+  }
+
+  factory UserChallengeProgress.fromMap(Map<String, dynamic> map) {
+    return UserChallengeProgress(
+      userId: map['userId'] ?? '',
+      challengeId: map['challengeId'] ?? '',
+      currentProgress: map['currentProgress'] ?? 0,
+      progressPercentage: (map['progressPercentage'] ?? 0.0).toDouble(),
+      isCompleted: map['isCompleted'] ?? false,
+      completedAt: EcoChallengeData._parseDateTime(map['completedAt']),
+      lastUpdated: EcoChallengeData._parseDateTime(map['lastUpdated']),
+    );
+  }
+}
+
 class EcoChallengesService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final CollectionReference _challengesCollection = _firestore.collection('eco_challenges');
-  static final CollectionReference _userChallengesCollection = _firestore.collection('user_challenges');
-  static final CollectionReference _userProgressCollection = _firestore.collection('user_progress');
+  static final CollectionReference _userProgressCollection = _firestore.collection('user_challenge_progress');
+  static final CollectionReference _userStatsCollection = _firestore.collection('user_challenge_stats');
 
   // Generate unique challenge ID
   static String _generateChallengeId() {
     final now = DateTime.now();
     final timestamp = now.millisecondsSinceEpoch;
     final random = Random().nextInt(1000);
-    return 'CHL_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_$random';
+    return 'CHALLENGE_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_$random';
   }
 
-  // Create new eco challenge
+  // Create a new challenge
   static Future<Map<String, dynamic>> createChallenge({
+    required String userId,
     required String title,
     required String description,
-    required String category,
+    required String reward,
+    required Color color,
+    required IconData icon,
     required int targetValue,
     required String targetUnit,
-    required int rewardPoints,
-    required String icon,
-    required Color color,
-    required int duration,
-    String? difficulty,
+    required String category,
+    required int durationDays,
   }) async {
     try {
       final challengeId = _generateChallengeId();
       final now = DateTime.now();
+      final endDate = now.add(Duration(days: durationDays));
 
-      final challengeData = {
-        'id': challengeId,
-        'title': title,
-        'description': description,
-        'category': category,
-        'targetValue': targetValue,
-        'targetUnit': targetUnit,
-        'rewardPoints': rewardPoints,
-        'icon': icon,
-        'color': '#${color.value.toRadixString(16).padLeft(8, '0')}',
-        'duration': duration,
-        'difficulty': difficulty ?? 'medium',
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
+      final challengeData = EcoChallengeData(
+        id: challengeId,
+        title: title,
+        description: description,
+        reward: reward,
+        colorHex: '#${color.value.toRadixString(16).substring(2)}',
+        iconName: _iconToString(icon),
+        targetValue: targetValue,
+        targetUnit: targetUnit,
+        startDate: now,
+        endDate: endDate,
+        category: category,
+        createdBy: userId,
+        createdAt: now,
+      );
 
-      await _challengesCollection.doc(challengeId).set(challengeData);
+      await _challengesCollection.doc(challengeId).set(challengeData.toMap());
 
       return {
         'success': true,
         'challengeId': challengeId,
         'message': 'Challenge created successfully!',
-        'challengeData': challengeData,
+        'challengeData': challengeData.toMap(),
       };
     } catch (e) {
       print('Error creating challenge: $e');
@@ -67,23 +213,18 @@ class EcoChallengesService {
     }
   }
 
-  // Get all active challenges
-  static Future<List<Map<String, dynamic>>> getAllChallenges() async {
+  // Get all challenges
+  static Future<List<EcoChallengeData>> getAllChallenges() async {
     try {
       final snapshot = await _challengesCollection
           .where('isActive', isEqualTo: true)
           .orderBy('createdAt', descending: true)
           .get();
 
-      final challenges = snapshot.docs.map((doc) {
+      return snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        return {
-          ...data,
-          'id': doc.id,
-        };
+        return EcoChallengeData.fromMap(data);
       }).toList();
-
-      return challenges;
     } catch (e) {
       print('Error getting challenges: $e');
       return [];
@@ -91,74 +232,73 @@ class EcoChallengesService {
   }
 
   // Get challenges by category
-  static Future<List<Map<String, dynamic>>> getChallengesByCategory(String category) async {
+  static Future<List<EcoChallengeData>> getChallengesByCategory(String category) async {
     try {
       final snapshot = await _challengesCollection
           .where('category', isEqualTo: category)
           .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
           .get();
 
-      final challenges = snapshot.docs.map((doc) {
+      return snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        return {
-          ...data,
-          'id': doc.id,
-        };
+        return EcoChallengeData.fromMap(data);
       }).toList();
-
-      return challenges;
     } catch (e) {
       print('Error getting challenges by category: $e');
       return [];
     }
   }
 
-  // Get user's active challenges
-  static Future<List<Map<String, dynamic>>> getUserChallenges(String userId) async {
+  // Get user's challenges
+  static Future<List<EcoChallengeData>> getUserChallenges(String userId) async {
     try {
-      final snapshot = await _userChallengesCollection
-          .where('userId', isEqualTo: userId)
-          .where('isActive', isEqualTo: true)
-          .orderBy('startedAt', descending: true)
+      final snapshot = await _challengesCollection
+          .where('createdBy', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
           .get();
 
-      final userChallenges = snapshot.docs.map((doc) {
+      return snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        return {
-          ...data,
-          'id': doc.id,
-        };
+        return EcoChallengeData.fromMap(data);
       }).toList();
-
-      // Get challenge details for each user challenge
-      final detailedChallenges = <Map<String, dynamic>>[];
-      for (var userChallenge in userChallenges) {
-        final challengeDoc = await _challengesCollection.doc(userChallenge['challengeId']).get();
-        if (challengeDoc.exists) {
-          final challengeData = challengeDoc.data() as Map<String, dynamic>;
-          detailedChallenges.add({
-            ...userChallenge,
-            'challengeDetails': challengeData,
-          });
-        }
-      }
-
-      return detailedChallenges;
     } catch (e) {
       print('Error getting user challenges: $e');
       return [];
     }
   }
 
-  // Start a challenge for user
-  static Future<Map<String, dynamic>> startChallenge({
+  // Update challenge progress
+  static Future<Map<String, dynamic>> updateChallengeProgress({
     required String userId,
     required String challengeId,
+    required int progress,
   }) async {
     try {
+      // Get current progress
+      final progressDoc = await _userProgressCollection
+          .where('userId', isEqualTo: userId)
+          .where('challengeId', isEqualTo: challengeId)
+          .get();
+
       final now = DateTime.now();
+      int currentProgress = 0;
+      double progressPercentage = 0.0;
+      bool isCompleted = false;
+      DateTime? completedAt;
+
+      if (progressDoc.docs.isNotEmpty) {
+        final existingProgress = UserChallengeProgress.fromMap(
+          progressDoc.docs.first.data() as Map<String, dynamic>
+        );
+        currentProgress = existingProgress.currentProgress;
+        progressPercentage = existingProgress.progressPercentage;
+        isCompleted = existingProgress.isCompleted;
+        completedAt = existingProgress.completedAt;
+      }
+
+      // Get challenge details
       final challengeDoc = await _challengesCollection.doc(challengeId).get();
-      
       if (!challengeDoc.exists) {
         return {
           'success': false,
@@ -166,95 +306,41 @@ class EcoChallengesService {
         };
       }
 
-      final challengeData = challengeDoc.data() as Map<String, dynamic>;
-      final duration = challengeData['duration'] ?? 7;
-      final endDate = now.add(Duration(days: duration));
+      final challengeData = EcoChallengeData.fromMap(
+        challengeDoc.data() as Map<String, dynamic>
+      );
 
-      final userChallengeData = {
-        'userId': userId,
-        'challengeId': challengeId,
-        'startedAt': now,
-        'endDate': endDate,
-        'currentProgress': 0,
-        'targetValue': challengeData['targetValue'],
-        'targetUnit': challengeData['targetUnit'],
-        'rewardPoints': challengeData['rewardPoints'],
-        'isCompleted': false,
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
+      // Update progress
+      final newProgress = currentProgress + progress;
+      final newProgressPercentage = (newProgress / challengeData.targetValue).clamp(0.0, 1.0);
+      final newIsCompleted = newProgress >= challengeData.targetValue;
+      final newCompletedAt = newIsCompleted && !isCompleted ? now : completedAt;
 
-      await _userChallengesCollection.add(userChallengeData);
+      final updatedProgress = UserChallengeProgress(
+        userId: userId,
+        challengeId: challengeId,
+        currentProgress: newProgress,
+        progressPercentage: newProgressPercentage,
+        isCompleted: newIsCompleted,
+        completedAt: newCompletedAt,
+        lastUpdated: now,
+      );
 
-      return {
-        'success': true,
-        'message': 'Challenge started successfully!',
-        'userChallengeData': userChallengeData,
-      };
-    } catch (e) {
-      print('Error starting challenge: $e');
-      return {
-        'success': false,
-        'message': 'Failed to start challenge: ${e.toString()}',
-      };
-    }
-  }
+      // Save progress
+      final progressId = '${userId}_$challengeId';
+      await _userProgressCollection.doc(progressId).set(updatedProgress.toMap());
 
-  // Update user's challenge progress
-  static Future<Map<String, dynamic>> updateChallengeProgress({
-    required String userId,
-    required String challengeId,
-    required int progress,
-  }) async {
-    try {
-      // Find user challenge
-      final userChallengeSnapshot = await _userChallengesCollection
-          .where('userId', isEqualTo: userId)
-          .where('challengeId', isEqualTo: challengeId)
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      if (userChallengeSnapshot.docs.isEmpty) {
-        return {
-          'success': false,
-          'message': 'Challenge not found for user!',
-        };
+      // Update user stats if completed
+      if (newIsCompleted && !isCompleted) {
+        await _updateUserStats(userId, challengeData);
       }
 
-      final userChallengeDoc = userChallengeSnapshot.docs.first;
-      final userChallengeData = userChallengeDoc.data() as Map<String, dynamic>;
-      final currentProgress = userChallengeData['currentProgress'] ?? 0;
-      final targetValue = userChallengeData['targetValue'] ?? 1;
-      final newProgress = currentProgress + progress;
-      final isCompleted = newProgress >= targetValue;
-
-      // Update user challenge progress
-      await userChallengeDoc.reference.update({
-        'currentProgress': newProgress,
-        'isCompleted': isCompleted,
-        'isActive': !isCompleted,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Record progress update
-      await _userProgressCollection.add({
-        'userId': userId,
-        'challengeId': challengeId,
-        'progress': progress,
-        'totalProgress': newProgress,
-        'isCompleted': isCompleted,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
       return {
         'success': true,
-        'message': isCompleted 
-            ? 'Challenge completed! You earned ${userChallengeData['rewardPoints']} Eco Points!' 
-            : 'Progress updated successfully!',
-        'newProgress': newProgress,
-        'isCompleted': isCompleted,
-        'rewardPoints': isCompleted ? userChallengeData['rewardPoints'] : 0,
+        'message': 'Progress updated successfully!',
+        'progress': updatedProgress.toMap(),
+        'isCompleted': newIsCompleted,
+        'pointsEarned': newIsCompleted && !isCompleted ? _extractPoints(challengeData.reward) : 0,
       };
     } catch (e) {
       print('Error updating challenge progress: $e');
@@ -265,55 +351,114 @@ class EcoChallengesService {
     }
   }
 
-  // Get user's challenge statistics
-  static Future<Map<String, dynamic>> getUserChallengeStats(String userId) async {
+  // Get user's challenge progress
+  static Future<List<UserChallengeProgress>> getUserProgress(String userId) async {
     try {
-      final userChallengesSnapshot = await _userChallengesCollection
+      final snapshot = await _userProgressCollection
           .where('userId', isEqualTo: userId)
           .get();
 
-      final userChallenges = userChallengesSnapshot.docs;
-      
-      int totalChallenges = userChallenges.length;
-      int completedChallenges = 0;
-      int totalEcoPoints = 0;
-      int activeChallenges = 0;
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return UserChallengeProgress.fromMap(data);
+      }).toList();
+    } catch (e) {
+      print('Error getting user progress: $e');
+      return [];
+    }
+  }
 
-             for (var doc in userChallenges) {
-         final data = doc.data() as Map<String, dynamic>;
-         if (data['isCompleted'] == true) {
-           completedChallenges++;
-           totalEcoPoints += (data['rewardPoints'] ?? 0) as int;
-         }
-         if (data['isActive'] == true) {
-           activeChallenges++;
-         }
-       }
+  // Get user's completed challenges
+  static Future<List<UserChallengeProgress>> getUserCompletedChallenges(String userId) async {
+    try {
+      final snapshot = await _userProgressCollection
+          .where('userId', isEqualTo: userId)
+          .where('isCompleted', isEqualTo: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return UserChallengeProgress.fromMap(data);
+      }).toList();
+    } catch (e) {
+      print('Error getting completed challenges: $e');
+      return [];
+    }
+  }
+
+  // Get user challenge statistics
+  static Future<Map<String, dynamic>> getUserChallengeStats(String userId) async {
+    try {
+      final progressList = await getUserProgress(userId);
+      final completedChallenges = await getUserCompletedChallenges(userId);
+      
+      int totalPoints = 0;
+      int totalChallenges = progressList.length;
+      int completedCount = completedChallenges.length;
+      double averageProgress = 0.0;
+
+      if (progressList.isNotEmpty) {
+        averageProgress = progressList.fold(0.0, (sum, progress) => sum + progress.progressPercentage) / progressList.length;
+      }
+
+      // Calculate total points from completed challenges
+      for (final progress in completedChallenges) {
+        final challengeDoc = await _challengesCollection.doc(progress.challengeId).get();
+        if (challengeDoc.exists) {
+          final challengeData = EcoChallengeData.fromMap(
+            challengeDoc.data() as Map<String, dynamic>
+          );
+          totalPoints += _extractPoints(challengeData.reward);
+        }
+      }
 
       return {
         'totalChallenges': totalChallenges,
-        'completedChallenges': completedChallenges,
-        'activeChallenges': activeChallenges,
-        'totalEcoPoints': totalEcoPoints,
-        'completionRate': totalChallenges > 0 ? (completedChallenges / totalChallenges) * 100 : 0.0,
+        'completedChallenges': completedCount,
+        'totalPoints': totalPoints,
+        'averageProgress': averageProgress,
+        'completionRate': totalChallenges > 0 ? (completedCount / totalChallenges) : 0.0,
       };
     } catch (e) {
-      print('Error getting user challenge stats: $e');
+      print('Error getting user stats: $e');
       return {
         'totalChallenges': 0,
         'completedChallenges': 0,
-        'activeChallenges': 0,
-        'totalEcoPoints': 0,
+        'totalPoints': 0,
+        'averageProgress': 0.0,
         'completionRate': 0.0,
       };
     }
   }
 
-  // Delete challenge
-  static Future<Map<String, dynamic>> deleteChallenge(String challengeId) async {
+  // Delete a challenge
+  static Future<Map<String, dynamic>> deleteChallenge({
+    required String challengeId,
+    required String userId,
+  }) async {
     try {
+      // Check if user owns the challenge
+      final challengeDoc = await _challengesCollection.doc(challengeId).get();
+      if (!challengeDoc.exists) {
+        return {
+          'success': false,
+          'message': 'Challenge not found!',
+        };
+      }
+
+      final challengeData = EcoChallengeData.fromMap(
+        challengeDoc.data() as Map<String, dynamic>
+      );
+
+      if (challengeData.createdBy != userId) {
+        return {
+          'success': false,
+          'message': 'You can only delete your own challenges!',
+        };
+      }
+
       await _challengesCollection.doc(challengeId).delete();
-      
+
       return {
         'success': true,
         'message': 'Challenge deleted successfully!',
@@ -330,101 +475,85 @@ class EcoChallengesService {
   // Initialize sample challenges
   static Future<void> initializeSampleChallenges() async {
     try {
-      final snapshot = await _challengesCollection.get();
+      final snapshot = await _challengesCollection.limit(1).get();
       if (snapshot.docs.isNotEmpty) {
-        print('Challenges already exist, skipping initialization');
+        print('Sample challenges already exist, skipping initialization');
         return;
       }
 
+      final now = DateTime.now();
       final sampleChallenges = [
         {
           'title': 'Zero Waste Week',
           'description': 'Go 7 days without producing any waste. Use reusable containers, avoid single-use plastics, and compost organic waste.',
-          'category': 'Waste Reduction',
+          'reward': '500 Eco Points',
+          'colorHex': '#B5C7F7',
+          'iconName': 'recycling_rounded',
           'targetValue': 7,
           'targetUnit': 'days',
-          'rewardPoints': 500,
-          'icon': 'recycling_rounded',
-          'color': '#B5C7F7',
-          'duration': 7,
-          'difficulty': 'hard',
+          'category': 'Waste Reduction',
+          'durationDays': 7,
         },
         {
           'title': 'Carbon Footprint Reduction',
-          'description': 'Reduce your daily carbon footprint by 20%. Walk or cycle instead of driving, use public transport, and conserve energy.',
-          'category': 'Transportation',
+          'description': 'Reduce your daily carbon footprint by 20%. Walk or cycle instead of driving, use public transport, and choose eco-friendly products.',
+          'reward': '300 Eco Points',
+          'colorHex': '#F9E79F',
+          'iconName': 'eco_rounded',
           'targetValue': 20,
           'targetUnit': '% reduction',
-          'rewardPoints': 300,
-          'icon': 'eco_rounded',
-          'color': '#F9E79F',
-          'duration': 14,
-          'difficulty': 'medium',
+          'category': 'Carbon Reduction',
+          'durationDays': 30,
         },
         {
           'title': 'Local Shopping Spree',
           'description': 'Buy from 5 local eco-friendly stores. Support local businesses and reduce transportation emissions.',
-          'category': 'Shopping',
+          'reward': '200 Eco Points',
+          'colorHex': '#E8D5C4',
+          'iconName': 'store_rounded',
           'targetValue': 5,
           'targetUnit': 'stores',
-          'rewardPoints': 200,
-          'icon': 'store_rounded',
-          'color': '#E8D5C4',
-          'duration': 30,
-          'difficulty': 'easy',
+          'category': 'Local Support',
+          'durationDays': 14,
         },
         {
-          'title': 'Plant-Based Meals',
-          'description': 'Eat 10 plant-based meals this week. Reduce meat consumption and try delicious vegetarian recipes.',
-          'category': 'Diet & Nutrition',
-          'targetValue': 10,
-          'targetUnit': 'meals',
-          'rewardPoints': 250,
-          'icon': 'restaurant_rounded',
-          'color': '#D6EAF8',
-          'duration': 7,
-          'difficulty': 'medium',
+          'title': 'Water Conservation',
+          'description': 'Save 1000 liters of water this month. Take shorter showers, fix leaks, and use water-efficient appliances.',
+          'reward': '400 Eco Points',
+          'colorHex': '#00BCD4',
+          'iconName': 'water_drop_rounded',
+          'targetValue': 1000,
+          'targetUnit': 'liters',
+          'category': 'Water Conservation',
+          'durationDays': 30,
         },
         {
-          'title': 'Plastic-Free Living',
-          'description': 'Go 14 days without using single-use plastics. Use reusable bags, bottles, and containers.',
-          'category': 'Plastic Reduction',
-          'targetValue': 14,
-          'targetUnit': 'days',
-          'rewardPoints': 600,
-          'icon': 'local_drink_rounded',
-          'color': '#B5C7F7',
-          'duration': 14,
-          'difficulty': 'hard',
-        },
-        {
-          'title': 'Eco Transportation',
-          'description': 'Use eco-friendly transportation for 20 trips. Walk, cycle, carpool, or use public transport.',
-          'category': 'Transportation',
-          'targetValue': 20,
-          'targetUnit': 'trips',
-          'rewardPoints': 450,
-          'icon': 'directions_bike_rounded',
-          'color': '#D6EAF8',
-          'duration': 30,
-          'difficulty': 'medium',
+          'title': 'Energy Saving Champion',
+          'description': 'Reduce energy consumption by 15%. Switch to LED bulbs, unplug devices, and use natural light.',
+          'reward': '350 Eco Points',
+          'colorHex': '#FF9800',
+          'iconName': 'electric_bolt_rounded',
+          'targetValue': 15,
+          'targetUnit': '% reduction',
+          'category': 'Energy Conservation',
+          'durationDays': 21,
         },
       ];
 
-             for (var challenge in sampleChallenges) {
-         await createChallenge(
-           title: challenge['title'] as String,
-           description: challenge['description'] as String,
-           category: challenge['category'] as String,
-           targetValue: challenge['targetValue'] as int,
-           targetUnit: challenge['targetUnit'] as String,
-           rewardPoints: challenge['rewardPoints'] as int,
-           icon: challenge['icon'] as String,
-           color: _parseColor(challenge['color'] as String),
-           duration: challenge['duration'] as int,
-           difficulty: challenge['difficulty'] as String?,
-         );
-       }
+      for (final challenge in sampleChallenges) {
+        await createChallenge(
+          userId: 'system',
+          title: challenge['title'] as String,
+          description: challenge['description'] as String,
+          reward: challenge['reward'] as String,
+          color: _parseColor(challenge['colorHex'] as String),
+          icon: _parseIcon(challenge['iconName'] as String),
+          targetValue: challenge['targetValue'] as int,
+          targetUnit: challenge['targetUnit'] as String,
+          category: challenge['category'] as String,
+          durationDays: challenge['durationDays'] as int,
+        );
+      }
 
       print('Sample challenges initialized successfully');
     } catch (e) {
@@ -432,18 +561,117 @@ class EcoChallengesService {
     }
   }
 
-  // Helper method to parse color string to Color object
-  static Color _parseColor(String colorString) {
+  // Helper methods
+  static String _iconToString(IconData icon) {
+    final iconMap = {
+      Icons.recycling_rounded: 'recycling_rounded',
+      Icons.eco_rounded: 'eco_rounded',
+      Icons.store_rounded: 'store_rounded',
+      Icons.water_drop_rounded: 'water_drop_rounded',
+      Icons.electric_bolt_rounded: 'electric_bolt_rounded',
+      Icons.restaurant_rounded: 'restaurant_rounded',
+      Icons.no_drinks_rounded: 'no_drinks_rounded',
+      Icons.directions_bike_rounded: 'directions_bike_rounded',
+      Icons.local_florist_rounded: 'local_florist_rounded',
+      Icons.park_rounded: 'park_rounded',
+      Icons.forest_rounded: 'forest_rounded',
+      Icons.local_drink_rounded: 'local_drink_rounded',
+      Icons.directions_bus_rounded: 'directions_bus_rounded',
+      Icons.directions_walk_rounded: 'directions_walk_rounded',
+      Icons.lightbulb_rounded: 'lightbulb_rounded',
+      Icons.solar_power_rounded: 'solar_power_rounded',
+      Icons.brush_rounded: 'brush_rounded',
+      Icons.spa_rounded: 'spa_rounded',
+      Icons.book_rounded: 'book_rounded',
+      Icons.face_rounded: 'face_rounded',
+      Icons.fitness_center_rounded: 'fitness_center_rounded',
+      Icons.local_cafe_rounded: 'local_cafe_rounded',
+    };
+    
+    return iconMap[icon] ?? 'eco_rounded';
+  }
+
+  static IconData _parseIcon(String iconName) {
+    final iconMap = {
+      'recycling_rounded': Icons.recycling_rounded,
+      'eco_rounded': Icons.eco_rounded,
+      'store_rounded': Icons.store_rounded,
+      'water_drop_rounded': Icons.water_drop_rounded,
+      'electric_bolt_rounded': Icons.electric_bolt_rounded,
+      'restaurant_rounded': Icons.restaurant_rounded,
+      'no_drinks_rounded': Icons.no_drinks_rounded,
+      'directions_bike_rounded': Icons.directions_bike_rounded,
+      'local_florist_rounded': Icons.local_florist_rounded,
+      'park_rounded': Icons.park_rounded,
+      'forest_rounded': Icons.forest_rounded,
+      'local_drink_rounded': Icons.local_drink_rounded,
+      'directions_bus_rounded': Icons.directions_bus_rounded,
+      'directions_walk_rounded': Icons.directions_walk_rounded,
+      'lightbulb_rounded': Icons.lightbulb_rounded,
+      'solar_power_rounded': Icons.solar_power_rounded,
+      'brush_rounded': Icons.brush_rounded,
+      'spa_rounded': Icons.spa_rounded,
+      'book_rounded': Icons.book_rounded,
+      'face_rounded': Icons.face_rounded,
+      'fitness_center_rounded': Icons.fitness_center_rounded,
+      'local_cafe_rounded': Icons.local_cafe_rounded,
+    };
+    
+    return iconMap[iconName] ?? Icons.eco_rounded;
+  }
+
+  static Color _parseColor(String colorHex) {
     try {
-      String hex = colorString.startsWith('#') ? colorString.substring(1) : colorString;
+      String hex = colorHex.startsWith('#') ? colorHex.substring(1) : colorHex;
       if (hex.length == 6) {
         return Color(int.parse('FF$hex', radix: 16));
       } else if (hex.length == 8) {
         return Color(int.parse(hex, radix: 16));
       }
-      return const Color(0xFFB5C7F7);
     } catch (e) {
-      return const Color(0xFFB5C7F7);
+      print('Error parsing color: $colorHex - $e');
+    }
+    return const Color(0xFFB5C7F7);
+  }
+
+  static int _extractPoints(String reward) {
+    try {
+      final match = RegExp(r'(\d+)').firstMatch(reward);
+      if (match != null) {
+        return int.parse(match.group(1)!);
+      }
+    } catch (e) {
+      print('Error extracting points from reward: $reward - $e');
+    }
+    return 0;
+  }
+
+  static Future<void> _updateUserStats(String userId, EcoChallengeData challenge) async {
+    try {
+      final statsDoc = await _userStatsCollection.doc(userId).get();
+      final points = _extractPoints(challenge.reward);
+      
+      if (statsDoc.exists) {
+        final currentData = statsDoc.data() as Map<String, dynamic>;
+        final currentPoints = (currentData['totalPoints'] ?? 0) as int;
+        final completedCount = (currentData['completedChallenges'] ?? 0) as int;
+        
+        await _userStatsCollection.doc(userId).update({
+          'totalPoints': currentPoints + points,
+          'completedChallenges': completedCount + 1,
+          'lastUpdated': DateTime.now(),
+        });
+      } else {
+        await _userStatsCollection.doc(userId).set({
+          'userId': userId,
+          'totalPoints': points,
+          'completedChallenges': 1,
+          'createdAt': DateTime.now(),
+          'lastUpdated': DateTime.now(),
+        });
+      }
+    } catch (e) {
+      print('Error updating user stats: $e');
     }
   }
 }

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import 'dart:math';
 
 class WishlistService {
@@ -42,6 +41,13 @@ class WishlistService {
     required String productIcon,
     required double carbonFootprint,
     String? productImage,
+    double? waterSaved,
+    double? energySaved,
+    double? wasteReduced,
+    double? treesEquivalent,
+    String? material,
+    double? rating,
+    double? quantity,
   }) async {
     try {
       // Check if product already exists in user's wishlist
@@ -72,6 +78,13 @@ class WishlistService {
         'productIcon': productIcon,
         'carbonFootprint': carbonFootprint,
         'productImage': productImage,
+        'waterSaved': waterSaved ?? 0.0,
+        'energySaved': energySaved ?? 0.0,
+        'wasteReduced': wasteReduced ?? 0.0,
+        'treesEquivalent': treesEquivalent ?? 0.0,
+        'material': material ?? 'Eco-friendly material',
+        'rating': rating ?? 4.5,
+        'quantity': quantity ?? 10.0,
         'addedAt': now,
         'createdAt': FieldValue.serverTimestamp(),
       };
@@ -527,6 +540,13 @@ class WishlistService {
           'productColor': '#D6EAF8',
           'productIcon': 'local_drink_rounded',
           'carbonFootprint': 0.5,
+          'waterSaved': 100.0,
+          'energySaved': 2.5,
+          'wasteReduced': 0.8,
+          'treesEquivalent': 1.2,
+          'material': 'Bamboo',
+          'rating': 4.8,
+          'quantity': 15,
         },
         {
           'productId': 'organic-cotton-tshirt',
@@ -537,6 +557,13 @@ class WishlistService {
           'productColor': '#B5C7F7',
           'productIcon': 'checkroom_rounded',
           'carbonFootprint': 1.2,
+          'waterSaved': 250.0,
+          'energySaved': 5.0,
+          'wasteReduced': 1.5,
+          'treesEquivalent': 2.0,
+          'material': 'Organic Cotton',
+          'rating': 4.6,
+          'quantity': 20,
         },
         {
           'productId': 'solar-phone-charger',
@@ -547,6 +574,13 @@ class WishlistService {
           'productColor': '#F9E79F',
           'productIcon': 'solar_power_rounded',
           'carbonFootprint': 2.0,
+          'waterSaved': 50.0,
+          'energySaved': 8.0,
+          'wasteReduced': 2.0,
+          'treesEquivalent': 3.0,
+          'material': 'Solar Panels + Plastic',
+          'rating': 4.7,
+          'quantity': 8,
         },
       ];
 
@@ -561,6 +595,13 @@ class WishlistService {
           productColor: item['productColor'] as String,
           productIcon: item['productIcon'] as String,
           carbonFootprint: item['carbonFootprint'] as double,
+          waterSaved: item['waterSaved'] as double?,
+          energySaved: item['energySaved'] as double?,
+          wasteReduced: item['wasteReduced'] as double?,
+          treesEquivalent: item['treesEquivalent'] as double?,
+          material: item['material'] as String?,
+          rating: item['rating'] as double?,
+          quantity: item['quantity'] as double?,
         );
       }
 

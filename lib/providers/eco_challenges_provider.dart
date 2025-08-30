@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import '../services/eco_challenges_service.dart';
 
 class EcoChallenge {
   final String id;
@@ -83,175 +84,96 @@ class EcoChallengesProvider extends ChangeNotifier {
   
   EcoChallengesProvider._internal() {
     print('EcoChallengesProvider initialized');
-    _initializeChallenges();
   }
 
   final List<EcoChallenge> _challenges = [];
   final Map<String, int> _userProgress = {};
   int _totalEcoPoints = 0;
+  bool _isLoading = false;
+  String? _error;
 
   List<EcoChallenge> get activeChallenges => _challenges.where((c) => c.isActive && !c.isCompleted).toList();
   List<EcoChallenge> get completedChallenges => _challenges.where((c) => c.isCompleted).toList();
   List<EcoChallenge> get allChallenges => List.from(_challenges);
   int get totalEcoPoints => _totalEcoPoints;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
-  void _initializeChallenges() {
-    print('Initializing challenges...');
-    final now = DateTime.now();
+  // Load challenges from Firestore
+  Future<void> loadChallenges() async {
+    _setLoading(true);
+    _clearError();
     
-    _challenges.clear(); // Clear existing challenges first
-    _challenges.addAll([
-      EcoChallenge(
-        id: 'zero_waste_week',
-        title: 'Zero Waste Week',
-        description: 'Go 7 days without producing any waste. Use reusable containers, avoid single-use plastics, and compost organic waste.',
-        reward: '500 Eco Points',
-        color: const Color(0xFFB5C7F7),
-        icon: Icons.recycling_rounded,
-        targetValue: 7,
-        targetUnit: 'days',
-        startDate: now,
-        endDate: now.add(const Duration(days: 7)),
-        category: 'Waste Reduction',
-        currentProgress: 0,
-        progressPercentage: 0.0,
-      ),
-      EcoChallenge(
-        id: 'carbon_footprint_reduction',
-        title: 'Carbon Footprint Reduction',
-        description: 'Reduce your daily carbon footprint by 20%. Walk or cycle instead of driving, use public transport, and choose eco-friendly products.',
-        reward: '300 Eco Points',
-        color: const Color(0xFFF9E79F),
-        icon: Icons.eco_rounded,
-        targetValue: 20,
-        targetUnit: '% reduction',
-        startDate: now,
-        endDate: now.add(const Duration(days: 30)),
-        category: 'Carbon Reduction',
-        currentProgress: 0,
-        progressPercentage: 0.0,
-      ),
-      EcoChallenge(
-        id: 'local_shopping',
-        title: 'Local Shopping Spree',
-        description: 'Buy from 5 local eco-friendly stores. Support local businesses and reduce transportation emissions.',
-        reward: '200 Eco Points',
-        color: const Color(0xFFE8D5C4),
-        icon: Icons.store_rounded,
-        targetValue: 5,
-        targetUnit: 'stores',
-        startDate: now,
-        endDate: now.add(const Duration(days: 14)),
-        category: 'Local Support',
-        currentProgress: 0,
-        progressPercentage: 0.0,
-      ),
-      EcoChallenge(
-        id: 'water_conservation',
-        title: 'Water Conservation',
-        description: 'Save 1000 liters of water this month. Take shorter showers, fix leaks, and use water-efficient appliances.',
-        reward: '400 Eco Points',
-        color: Colors.cyan,
-        icon: Icons.water_drop_rounded,
-        targetValue: 1000,
-        targetUnit: 'liters',
-        startDate: now,
-        endDate: now.add(const Duration(days: 30)),
-        category: 'Water Conservation',
-        currentProgress: 0,
-        progressPercentage: 0.0,
-      ),
-      EcoChallenge(
-        id: 'energy_saving',
-        title: 'Energy Saving Champion',
-        description: 'Reduce energy consumption by 15%. Switch to LED bulbs, unplug devices, and use natural light.',
-        reward: '350 Eco Points',
-        color: Colors.orange,
-        icon: Icons.electric_bolt_rounded,
-        targetValue: 15,
-        targetUnit: '% reduction',
-        startDate: now,
-        endDate: now.add(const Duration(days: 21)),
-        category: 'Energy Conservation',
-        currentProgress: 0,
-        progressPercentage: 0.0,
-      ),
-      EcoChallenge(
-        id: 'plant_based_meals',
-        title: 'Plant-Based Meals',
-        description: 'Eat 10 plant-based meals this week. Reduce meat consumption and try delicious vegetarian recipes.',
-        reward: '250 Eco Points',
-        color: Colors.green,
-        icon: Icons.restaurant_rounded,
-        targetValue: 10,
-        targetUnit: 'meals',
-        startDate: now,
-        endDate: now.add(const Duration(days: 7)),
-        category: 'Diet & Nutrition',
-        currentProgress: 0,
-        progressPercentage: 0.0,
-      ),
-      EcoChallenge(
-        id: 'plastic_free_living',
-        title: 'Plastic-Free Living',
-        description: 'Go 14 days without using single-use plastics. Use reusable bags, bottles, and containers.',
-        reward: '600 Eco Points',
-        color: const Color(0xFFD6EAF8),
-        icon: Icons.no_drinks_rounded,
-        targetValue: 14,
-        targetUnit: 'days',
-        startDate: now,
-        endDate: now.add(const Duration(days: 14)),
-        category: 'Plastic Reduction',
-        currentProgress: 0,
-        progressPercentage: 0.0,
-      ),
-      EcoChallenge(
-        id: 'eco_transport',
-        title: 'Eco Transportation',
-        description: 'Use eco-friendly transportation for 20 trips. Walk, cycle, carpool, or use public transport.',
-        reward: '450 Eco Points',
-        color: const Color(0xFFE8F5E8),
-        icon: Icons.directions_bike_rounded,
-        targetValue: 20,
-        targetUnit: 'trips',
-        startDate: now,
-        endDate: now.add(const Duration(days: 30)),
-        category: 'Transportation',
-        currentProgress: 0,
-        progressPercentage: 0.0,
-      ),
-    ]);
-    print('Challenges initialized: ${_challenges.length}');
-    notifyListeners(); // Notify listeners after initialization
-  }
-
-  void updateProgress(String challengeId, int progress) {
-    final challengeIndex = _challenges.indexWhere((c) => c.id == challengeId);
-    if (challengeIndex != -1) {
-      final challenge = _challenges[challengeIndex];
-      final newProgress = (challenge.currentProgress + progress).clamp(0, challenge.targetValue);
-      final progressPercentage = (newProgress / challenge.targetValue).clamp(0.0, 1.0);
-      final isCompleted = newProgress >= challenge.targetValue;
-
-      _challenges[challengeIndex] = challenge.copyWith(
-        currentProgress: newProgress,
-        progressPercentage: progressPercentage,
-        isCompleted: isCompleted,
-      );
-
-      if (isCompleted && !challenge.isCompleted) {
-        _awardPoints(challenge);
+    try {
+      final challengesData = await EcoChallengesService.getAllChallenges();
+      _challenges.clear();
+      
+      for (final challengeData in challengesData) {
+        final challenge = EcoChallenge(
+          id: challengeData.id,
+          title: challengeData.title,
+          description: challengeData.description,
+          reward: challengeData.reward,
+          color: _parseColor(challengeData.colorHex),
+          icon: _parseIcon(challengeData.iconName),
+          targetValue: challengeData.targetValue,
+          targetUnit: challengeData.targetUnit,
+          startDate: challengeData.startDate,
+          endDate: challengeData.endDate,
+          category: challengeData.category,
+          isActive: challengeData.isActive,
+          isCompleted: challengeData.isCompleted,
+          currentProgress: challengeData.currentProgress,
+          progressPercentage: challengeData.progressPercentage,
+        );
+        _challenges.add(challenge);
       }
-
+      
+      print('Challenges loaded from Firestore: ${_challenges.length}');
       notifyListeners();
+    } catch (e) {
+      _setError('Failed to load challenges: ${e.toString()}');
+    } finally {
+      _setLoading(false);
     }
   }
 
-  void _awardPoints(EcoChallenge challenge) {
-    final points = int.parse(challenge.reward.split(' ')[0]);
-    _totalEcoPoints += points;
-    notifyListeners();
+  // Initialize challenges (load from Firestore or create sample data)
+  Future<void> initializeChallenges() async {
+    await loadChallenges();
+    
+    // If no challenges exist, initialize sample data
+    if (_challenges.isEmpty) {
+      await EcoChallengesService.initializeSampleChallenges();
+      await loadChallenges();
+    }
+  }
+
+  // Load user progress from Firestore
+  Future<void> loadUserProgress(String userId) async {
+    try {
+      final progressList = await EcoChallengesService.getUserProgress(userId);
+      
+      for (final progress in progressList) {
+        final challengeIndex = _challenges.indexWhere((c) => c.id == progress.challengeId);
+        if (challengeIndex != -1) {
+          final challenge = _challenges[challengeIndex];
+          _challenges[challengeIndex] = challenge.copyWith(
+            currentProgress: progress.currentProgress,
+            progressPercentage: progress.progressPercentage,
+            isCompleted: progress.isCompleted,
+          );
+        }
+      }
+      
+      // Load user stats
+      final stats = await EcoChallengesService.getUserChallengeStats(userId);
+      _totalEcoPoints = stats['totalPoints'] ?? 0;
+      
+      notifyListeners();
+    } catch (e) {
+      print('Error loading user progress: $e');
+    }
   }
 
   void resetChallenge(String challengeId) {
@@ -269,14 +191,6 @@ class EcoChallengesProvider extends ChangeNotifier {
   void addCustomChallenge(EcoChallenge challenge) {
     print('Adding custom challenge: ${challenge.title}');
     _challenges.add(challenge);
-    print('Total challenges now: ${_challenges.length}');
-    print('Active challenges: ${activeChallenges.length}');
-    notifyListeners();
-  }
-
-  void deleteChallenge(String challengeId) {
-    print('Deleting challenge: $challengeId');
-    _challenges.removeWhere((challenge) => challenge.id == challengeId);
     print('Total challenges now: ${_challenges.length}');
     print('Active challenges: ${activeChallenges.length}');
     notifyListeners();
@@ -305,33 +219,184 @@ class EcoChallengesProvider extends ChangeNotifier {
   }
 
   // Simulate daily progress updates
-  void simulateDailyProgress() {
+  void simulateDailyProgress(String userId) {
     for (final challenge in activeChallenges) {
       if (Random().nextDouble() < 0.3) { // 30% chance of progress
         final progress = Random().nextInt(3) + 1; // 1-3 progress points
-        updateProgress(challenge.id, progress);
+        updateProgress(challenge.id, progress, userId);
       }
     }
   }
 
   // Load sample progress for demonstration
-  void loadSampleProgress() {
-    updateProgress('zero_waste_week', 4);
-    updateProgress('carbon_footprint_reduction', 12);
-    updateProgress('local_shopping', 2);
-    updateProgress('water_conservation', 350);
-    updateProgress('energy_saving', 8);
-    updateProgress('plant_based_meals', 6);
-    updateProgress('plastic_free_living', 8);
-    updateProgress('eco_transport', 12);
+  void loadSampleProgress(String userId) {
+    updateProgress('zero_waste_week', 4, userId);
+    updateProgress('carbon_footprint_reduction', 12, userId);
+    updateProgress('local_shopping', 2, userId);
+    updateProgress('water_conservation', 350, userId);
+    updateProgress('energy_saving', 8, userId);
+    updateProgress('plant_based_meals', 6, userId);
+    updateProgress('plastic_free_living', 8, userId);
+    updateProgress('eco_transport', 12, userId);
   }
 
   // Force initialize challenges (for debugging)
   void forceInitialize() {
     if (_challenges.isEmpty) {
       print('Force initializing challenges...');
-      _initializeChallenges();
+      initializeChallenges();
       print('Challenges initialized: ${_challenges.length}');
     }
+  }
+
+  // Create a new challenge
+  Future<bool> createChallenge({
+    required String userId,
+    required String title,
+    required String description,
+    required String reward,
+    required Color color,
+    required IconData icon,
+    required int targetValue,
+    required String targetUnit,
+    required String category,
+    required int durationDays,
+  }) async {
+    _setLoading(true);
+    _clearError();
+    
+    try {
+      final result = await EcoChallengesService.createChallenge(
+        userId: userId,
+        title: title,
+        description: description,
+        reward: reward,
+        color: color,
+        icon: icon,
+        targetValue: targetValue,
+        targetUnit: targetUnit,
+        category: category,
+        durationDays: durationDays,
+      );
+      
+      if (result['success']) {
+        await loadChallenges();
+        return true;
+      } else {
+        _setError(result['message']);
+        return false;
+      }
+    } catch (e) {
+      _setError('Failed to create challenge: ${e.toString()}');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Update challenge progress
+  Future<bool> updateProgress(String challengeId, int progress, String userId) async {
+    try {
+      final result = await EcoChallengesService.updateChallengeProgress(
+        userId: userId,
+        challengeId: challengeId,
+        progress: progress,
+      );
+      
+      if (result['success']) {
+        await loadUserProgress(userId);
+        return true;
+      } else {
+        _setError(result['message']);
+        return false;
+      }
+    } catch (e) {
+      _setError('Failed to update progress: ${e.toString()}');
+      return false;
+    }
+  }
+
+  // Delete a challenge
+  Future<bool> deleteChallenge(String challengeId, String userId) async {
+    _setLoading(true);
+    _clearError();
+    
+    try {
+      final result = await EcoChallengesService.deleteChallenge(
+        challengeId: challengeId,
+        userId: userId,
+      );
+      
+      if (result['success']) {
+        await loadChallenges();
+        return true;
+      } else {
+        _setError(result['message']);
+        return false;
+      }
+    } catch (e) {
+      _setError('Failed to delete challenge: ${e.toString()}');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Helper methods
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setError(String error) {
+    _error = error;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _error = null;
+  }
+
+  Color _parseColor(String colorHex) {
+    try {
+      String hex = colorHex.startsWith('#') ? colorHex.substring(1) : colorHex;
+      if (hex.length == 6) {
+        return Color(int.parse('FF$hex', radix: 16));
+      } else if (hex.length == 8) {
+        return Color(int.parse(hex, radix: 16));
+      }
+    } catch (e) {
+      print('Error parsing color: $colorHex - $e');
+    }
+    return const Color(0xFFB5C7F7);
+  }
+
+  IconData _parseIcon(String iconName) {
+    final iconMap = {
+      'recycling_rounded': Icons.recycling_rounded,
+      'eco_rounded': Icons.eco_rounded,
+      'store_rounded': Icons.store_rounded,
+      'water_drop_rounded': Icons.water_drop_rounded,
+      'electric_bolt_rounded': Icons.electric_bolt_rounded,
+      'restaurant_rounded': Icons.restaurant_rounded,
+      'no_drinks_rounded': Icons.no_drinks_rounded,
+      'directions_bike_rounded': Icons.directions_bike_rounded,
+      'local_florist_rounded': Icons.local_florist_rounded,
+      'park_rounded': Icons.park_rounded,
+      'forest_rounded': Icons.forest_rounded,
+      'local_drink_rounded': Icons.local_drink_rounded,
+      'directions_bus_rounded': Icons.directions_bus_rounded,
+      'directions_walk_rounded': Icons.directions_walk_rounded,
+      'lightbulb_rounded': Icons.lightbulb_rounded,
+      'solar_power_rounded': Icons.solar_power_rounded,
+      'brush_rounded': Icons.brush_rounded,
+      'spa_rounded': Icons.spa_rounded,
+      'book_rounded': Icons.book_rounded,
+      'face_rounded': Icons.face_rounded,
+      'fitness_center_rounded': Icons.fitness_center_rounded,
+      'local_cafe_rounded': Icons.local_cafe_rounded,
+    };
+    
+    return iconMap[iconName] ?? Icons.eco_rounded;
   }
 }

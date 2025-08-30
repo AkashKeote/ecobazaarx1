@@ -513,13 +513,13 @@ class _LoginScreenState extends State<LoginScreen>
                                   Icon(
                                     Icons.lock_reset_rounded,
                                     size: 16,
-                                    color: const Color(0xFFB5C7F7),
+                                    color: const Color.fromARGB(255, 0, 4, 14),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Forgot Password?',
                                     style: GoogleFonts.poppins(
-                                      color: const Color(0xFFB5C7F7),
+                                      color: const Color.fromARGB(255, 0, 4, 15),
                                       fontWeight: FontWeight.w500,
                                       fontSize: 14,
                                     ),

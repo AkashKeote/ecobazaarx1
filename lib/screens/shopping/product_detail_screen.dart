@@ -483,10 +483,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                   ),
                                   IconButton(
                                     onPressed: () {
-                                                                             if (_quantity < _parseInt(widget.product['quantity'])) {
+                                      // Debug: Print the product quantity
+                                      print('Product quantity: ${widget.product['quantity']}');
+                                      print('Parsed quantity: ${_parseInt(widget.product['quantity'])}');
+                                      print('Current _quantity: $_quantity');
+                                      
+                                      // Check if we can increment (with a reasonable limit)
+                                      final maxQuantity = _parseInt(widget.product['quantity']);
+                                      final limit = maxQuantity > 0 ? maxQuantity : 99; // Default to 99 if no stock limit
+                                      
+                                      if (_quantity < limit) {
                                         setState(() {
                                           _quantity++;
                                         });
+                                      } else {
+                                        // Show a message if trying to exceed stock
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Maximum quantity reached',
+                                              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                            ),
+                                            backgroundColor: Colors.orange[300],
+                                            behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                        );
                                       }
                                     },
                                     icon: const Icon(

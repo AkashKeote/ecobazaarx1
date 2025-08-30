@@ -17,23 +17,28 @@ import 'providers/product_view_provider.dart';
 import 'providers/eco_challenges_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/orders_provider.dart';
-import 'config/firebase_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: const FirebaseOptions(
-      apiKey: 'AIzaSyBDFe6o3M18xli1ssoNE2db_8luRpF8wCk',
-      authDomain: 'ecobazzarx.firebaseapp.com',
-      projectId: 'ecobazzarx',
-      storageBucket: 'ecobazzarx.firebasestorage.app',
-      messagingSenderId: '321134139960',
-      appId: '1:321134139960:web:8e7f3c2dd23ba98a32a4cd',
-      measurementId: 'G-0TYKMV0NS9',
-    ),
-  );
+  try {
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: 'AIzaSyBDFe6o3M18xli1ssoNE2db_8luRpF8wCk',
+        authDomain: 'ecobazzarx.firebaseapp.com',
+        projectId: 'ecobazzarx',
+        storageBucket: 'ecobazzarx.firebasestorage.app',
+        messagingSenderId: '321134139960',
+        appId: '1:321134139960:web:8e7f3c2dd23ba98a32a4cd',
+        measurementId: 'G-0TYKMV0NS9',
+      ),
+    );
+    print('Firebase initialized successfully');
+  } catch (e) {
+    print('Firebase initialization error: $e');
+    // Continue with app even if Firebase fails
+  }
   
   runApp(const EcoBazaarXApp());
 }

@@ -727,13 +727,13 @@ class _SignupScreenState extends State<SignupScreen>
                               Icon(
                                 Icons.lock_reset_rounded,
                                 size: 16,
-                                color: const Color(0xFFF9E79F),
+                                color: const Color.fromARGB(255, 0, 0, 0),
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 'Forgot Password?',
                                 style: GoogleFonts.poppins(
-                                  color: const Color(0xFFF9E79F),
+                                  color: const Color.fromARGB(255, 0, 0, 0),
                                   fontWeight: FontWeight.w500,
                                   fontSize: 14,
                                 ),

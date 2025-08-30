@@ -97,8 +97,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _onlineUsers = 1247;
   double _todaysSavings = 156.80;
   int _nearbyStores = 8;
-  String _currentWeather = "Sunny 28°C";
-  List<String> _liveActivities = [
+  final String _currentWeather = "Sunny 28°C";
+  final List<String> _liveActivities = [
     "Sarah just bought organic cotton shirts",
     "GreenMart added 12 new eco products",
     "Mumbai saved 45kg CO₂ today",
@@ -107,17 +107,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _activityIndex = 0;
   
   // New interactive features
-  bool _isNotificationsEnabled = true;
-  bool _isDarkMode = false;
-  int _ecoPoints = 1250;
-  int _streakDays = 7;
+  final bool _isNotificationsEnabled = true;
+  final bool _isDarkMode = false;
+  final int _ecoPoints = 1250;
+  final int _streakDays = 7;
   
 
   
   // Eco challenges will be managed by EcoChallengesProvider
   
   // Live notifications
-  List<Map<String, dynamic>> _notifications = [
+  final List<Map<String, dynamic>> _notifications = [
     {
       'title': '🎉 Flash Sale!',
       'message': '30% off on eco-friendly products',
@@ -448,7 +448,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${_onlineUsers} online',
+                            '$_onlineUsers online',
                             style: GoogleFonts.poppins(
                               color: Colors.white,
                               fontSize: 12,
@@ -1105,8 +1105,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     opacity: _fadeAnimation,
                     child: Consumer<AuthProvider>(
                       builder: (context, authProvider, child) {
-                        if (authProvider.userRole == null)
+                        if (authProvider.userRole == null) {
                           return const SizedBox.shrink();
+                        }
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -2999,7 +3000,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         
                         ...challengesProvider.activeChallenges.map((challenge) => 
                           _buildDetailedChallengeCard(challenge, challengesProvider)
-                        ).toList(),
+                        ),
                         
                         const SizedBox(height: 24),
                         
@@ -3017,7 +3018,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           
                           ...challengesProvider.completedChallenges.map((challenge) => 
                             _buildCompletedChallengeCard(challenge)
-                          ).toList(),
+                          ),
                           
                           const SizedBox(height: 24),
                         ],
@@ -3028,7 +3029,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: () {
-                                  challengesProvider.loadSampleProgress();
+                                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                                  final userId = authProvider.firebaseUser?.uid ?? 'demo_user';
+                                  challengesProvider.loadSampleProgress(userId);
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -3239,16 +3242,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ],
                   ),
                 ),
-                TextButton(
-                  onPressed: () {
-                    provider.updateProgress(challenge.id, 1);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Progress updated!', style: GoogleFonts.poppins()),
-                        backgroundColor: challenge.color,
-                      ),
-                    );
-                  },
+                                  TextButton(
+                    onPressed: () {
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final userId = authProvider.firebaseUser?.uid ?? 'demo_user';
+                      provider.updateProgress(challenge.id, 1, userId);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Progress updated!', style: GoogleFonts.poppins()),
+                          backgroundColor: challenge.color,
+                        ),
+                      );
+                    },
                   child: Text(
                     'Update Progress',
                     style: GoogleFonts.poppins(
@@ -3383,19 +3388,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               style: GoogleFonts.poppins(color: Colors.grey[600]),
             ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              final provider = Provider.of<EcoChallengesProvider>(context, listen: false);
-              provider.deleteChallenge(challenge.id);
-              Navigator.pop(context);
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Challenge deleted successfully!', style: GoogleFonts.poppins()),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            },
+                      ElevatedButton(
+              onPressed: () {
+                final provider = Provider.of<EcoChallengesProvider>(context, listen: false);
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                final userId = authProvider.firebaseUser?.uid ?? 'demo_user';
+                provider.deleteChallenge(challenge.id, userId);
+                Navigator.pop(context);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Challenge deleted successfully!', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
@@ -3561,7 +3568,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Container(
+                SizedBox(
                   height: 120,
                   child: SingleChildScrollView(
                     child: Wrap(
@@ -3629,7 +3636,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
-                  value: selectedDuration,
+                  initialValue: selectedDuration,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -4695,7 +4702,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'description': product['description'] ?? 'Eco-friendly ${(product['name']?.toString() ?? 'product').toLowerCase()}',
         'price': _parsePrice(product['price']),
         'rating': product['rating'] ?? 4.5,
-        'discount': product['discount'] ?? null,
+        'discount': product['discount'],
         'color': product['color'] ?? '#B5C7F7',
         'icon': product['icon'] ?? 'shopping_bag_rounded',
         'category': _getProductCategory(product),
@@ -4705,7 +4712,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'wasteReduced': product['wasteReduced'] ?? 0.0,
         'treesEquivalent': product['treesEquivalent'] ?? 0.0,
         'material': product['material'] ?? 'Eco-friendly material',
-        'image': product['image'] ?? null,
+        'image': product['image'],
       };
 
       // Track product view
@@ -5414,7 +5421,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             onChanged: (value) {
               // Handle notification toggle
             },
-            activeColor: const Color(0xFFB5C7F7),
+            activeThumbColor: const Color(0xFFB5C7F7),
           ),
         ],
       ),
@@ -6326,32 +6333,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () {
-              // Close modal and navigate to product detail
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProductDetailScreen(product: {
-                    'id': product.productId ?? 'unknown',
-                    'name': product.name ?? 'Unknown Product',
-                    'description': product.description ?? 'Eco-friendly product',
-                    'price': product.price ?? 0.0,
-                    'color': _colorToString(product.color),
-                    'icon': _iconToString(product.icon),
-                    'category': product.category ?? 'General',
-                    'carbonFootprint': 1.0,
-                    'waterSaved': 0.0,
-                    'energySaved': 0.0,
-                    'wasteReduced': 0.0,
-                    'treesEquivalent': 0.0,
-                    'material': 'Eco-friendly material',
-                    'rating': product.rating ?? 4.5,
-                  }),
-                ),
-              );
-            },
+                            GestureDetector(
+                    onTap: () {
+                      // Navigate to product detail (no need to pop since we're not in a modal)
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProductDetailScreen(product: {
+                            'id': product.productId ?? 'unknown',
+                            'name': product.name ?? 'Unknown Product',
+                            'description': product.description ?? 'Eco-friendly product',
+                            'price': product.price ?? 0.0,
+                            'color': _colorToString(product.color),
+                            'icon': _iconToString(product.icon),
+                            'category': product.category ?? 'General',
+                            'carbonFootprint': 1.0,
+                            'waterSaved': 0.0,
+                            'energySaved': 0.0,
+                            'wasteReduced': 0.0,
+                            'treesEquivalent': 0.0,
+                            'material': 'Eco-friendly material',
+                            'rating': product.rating ?? 4.5,
+                            'quantity': 10, // Add default quantity
+                          }),
+                        ),
+                      );
+                    },
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -6595,7 +6602,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         icon: _getIconFromString(item['productIcon']),
                         color: _parseColor(item['productColor']),
                         category: item['productCategory'] ?? 'General',
-                        carbonFootprint: _parseDouble(item['carbonFootprint']),
+                        carbonFootprint: _parseDouble(item['carbonFootprint'] ?? 1.0),
                       );
                       _showSnackBar('Added to cart');
                     },
@@ -6647,14 +6654,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             'color': productColor,
                             'icon': productIcon,
                             'category': productCategory,
-                            'carbonFootprint': _parseDouble(item['carbonFootprint']),
-                            'waterSaved': _parseDouble(item['waterSaved']),
-                            'energySaved': _parseDouble(item['energySaved']),
-                            'wasteReduced': _parseDouble(item['wasteReduced']),
-                            'treesEquivalent': _parseDouble(item['treesEquivalent']),
+                            'carbonFootprint': _parseDouble(item['carbonFootprint'] ?? 1.0),
+                            'waterSaved': _parseDouble(item['waterSaved'] ?? 0.0),
+                            'energySaved': _parseDouble(item['energySaved'] ?? 0.0),
+                            'wasteReduced': _parseDouble(item['wasteReduced'] ?? 0.0),
+                            'treesEquivalent': _parseDouble(item['treesEquivalent'] ?? 0.0),
                             'material': item['material']?.toString() ?? 'Eco-friendly material',
-                            'rating': _parseDouble(item['rating']),
-                            'quantity': _parseDouble(item['quantity']),
+                            'rating': _parseDouble(item['rating'] ?? 4.5),
+                            'quantity': _parseDouble(item['quantity'] ?? 10.0),
                           }),
                         ),
                       );

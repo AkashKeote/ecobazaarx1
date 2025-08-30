@@ -72,6 +72,13 @@ class WishlistProvider extends ChangeNotifier {
     required String productIcon,
     required double carbonFootprint,
     String? productImage,
+    double? waterSaved,
+    double? energySaved,
+    double? wasteReduced,
+    double? treesEquivalent,
+    String? material,
+    double? rating,
+    double? quantity,
   }) async {
     _setLoading(true);
     _clearError();
@@ -88,6 +95,13 @@ class WishlistProvider extends ChangeNotifier {
         productIcon: productIcon,
         carbonFootprint: carbonFootprint,
         productImage: productImage,
+        waterSaved: waterSaved,
+        energySaved: energySaved,
+        wasteReduced: wasteReduced,
+        treesEquivalent: treesEquivalent,
+        material: material,
+        rating: rating,
+        quantity: quantity,
       );
       
       if (result['success']) {
