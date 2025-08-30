@@ -50,19 +50,20 @@ class ProductViewProvider extends ChangeNotifier {
 
     // Add new product view at the beginning
     _viewedProducts.insert(0, ProductView(
-      productId: product['id'],
-      name: product['name'],
-      description: product['description'],
-      price: product['price'].toDouble(),
+      productId: product['id'] ?? 'unknown',
+      name: product['name'] ?? 'Unknown Product',
+      description: product['description'] ?? 'Eco-friendly product',
+      price: _parsePrice(product['price']),
       rating: 4.0 + (Random().nextDouble() * 1.0), // Random rating between 4.0-5.0
-      category: product['category'],
-      icon: product['icon'],
-      color: product['color'],
+      category: _parseCategory(product['category']),
+      icon: _parseIcon(product['icon']),
+      color: _parseColor(product['color']),
       viewedAt: DateTime.now(),
     ));
 
     // Update category view count
-    _categoryViewCounts[product['category']] = (_categoryViewCounts[product['category']] ?? 0) + 1;
+    final categoryString = _parseCategory(product['category']);
+    _categoryViewCounts[categoryString] = (_categoryViewCounts[categoryString] ?? 0) + 1;
 
     // Keep only last 20 viewed products
     if (_viewedProducts.length > 20) {
@@ -91,6 +92,118 @@ class ProductViewProvider extends ChangeNotifier {
     final sortedCategories = _categoryViewCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     return sortedCategories.take(4).toList();
+  }
+
+  // Helper method to parse color to Color object
+  Color _parseColor(dynamic colorValue) {
+    if (colorValue == null) {
+      return const Color(0xFFB5C7F7); // Default color
+    }
+    
+    // If it's already a Color object, return it
+    if (colorValue is Color) {
+      return colorValue;
+    }
+    
+    // If it's a string, parse it
+    if (colorValue is String) {
+      if (colorValue.isEmpty) {
+        return const Color(0xFFB5C7F7); // Default color
+      }
+      
+      try {
+        // Remove # if present
+        String hex = colorValue.startsWith('#') ? colorValue.substring(1) : colorValue;
+        
+        // Handle different hex formats
+        if (hex.length == 6) {
+          return Color(int.parse('FF$hex', radix: 16));
+        } else if (hex.length == 8) {
+          return Color(int.parse(hex, radix: 16));
+        } else {
+          return const Color(0xFFB5C7F7); // Default color
+        }
+      } catch (e) {
+        print('Error parsing color: $colorValue - $e');
+        return const Color(0xFFB5C7F7); // Default color
+      }
+    }
+    
+    return const Color(0xFFB5C7F7); // Default color
+  }
+
+
+
+  // Helper method to parse category to String
+  String _parseCategory(dynamic categoryValue) {
+    if (categoryValue == null) {
+      return 'General';
+    }
+    
+    if (categoryValue is String) {
+      return categoryValue;
+    }
+    
+    return categoryValue.toString();
+  }
+
+  // Helper method to parse icon to IconData
+  IconData _parseIcon(dynamic iconValue) {
+    if (iconValue == null) {
+      return Icons.shopping_bag_rounded; // Default icon
+    }
+    
+    // If it's already an IconData object, return it
+    if (iconValue is IconData) {
+      return iconValue;
+    }
+    
+    // If it's a string, parse it
+    if (iconValue is String) {
+      if (iconValue.isEmpty) {
+        return Icons.shopping_bag_rounded; // Default icon
+      }
+      
+      // Map of icon strings to IconData
+      final iconMap = {
+        'checkroom_rounded': Icons.checkroom_rounded,
+        'water_drop_rounded': Icons.water_drop_rounded,
+        'solar_power_rounded': Icons.solar_power_rounded,
+        'shopping_bag_rounded': Icons.shopping_bag_rounded,
+        'brush_rounded': Icons.brush_rounded,
+        'spa_rounded': Icons.spa_rounded,
+        'book_rounded': Icons.book_rounded,
+        'face_rounded': Icons.face_rounded,
+        'fitness_center_rounded': Icons.fitness_center_rounded,
+        'local_florist_rounded': Icons.local_florist_rounded,
+        'local_cafe_rounded': Icons.local_cafe_rounded,
+        'eco_rounded': Icons.eco_rounded,
+        'recycling_rounded': Icons.recycling_rounded,
+        'park_rounded': Icons.park_rounded,
+        'forest_rounded': Icons.forest_rounded,
+        'local_drink_rounded': Icons.local_drink_rounded,
+        'directions_bus_rounded': Icons.directions_bus_rounded,
+        'directions_walk_rounded': Icons.directions_walk_rounded,
+        'restaurant_rounded': Icons.restaurant_rounded,
+        'lightbulb_rounded': Icons.lightbulb_rounded,
+        'store_rounded': Icons.store_rounded,
+      };
+      
+      return iconMap[iconValue] ?? Icons.shopping_bag_rounded;
+    }
+    
+    return Icons.shopping_bag_rounded; // Default icon
+  }
+
+  // Helper method to safely parse price values
+  double _parsePrice(dynamic priceValue) {
+    if (priceValue == null) return 0.0;
+    if (priceValue is double) return priceValue;
+    if (priceValue is int) return priceValue.toDouble();
+    if (priceValue is String) {
+      return double.tryParse(priceValue) ?? 0.0;
+    }
+    return 0.0;
   }
 
   // Get products viewed today

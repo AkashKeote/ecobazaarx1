@@ -1,166 +1,196 @@
-import 'package:flutter/material.dart';
-import 'dart:math';
+import 'package:flutter/foundation.dart';
+import '../services/store_service.dart';
 
-class StoreProvider extends ChangeNotifier {
-  // Centralized store data that both admin and shopkeeper can access
-  List<Map<String, dynamic>> _allStores = [];
+class StoreProvider with ChangeNotifier {
+  final StoreService _storeService = StoreService();
   
-  StoreProvider() {
-    // Initialize with default stores
-    _allStores = [
-      {
-        'id': '1',
-        'name': 'GreenMart',
-        'category': 'Food & Beverages',
-        'performance': 0.85,
-        'rating': 4.2,
-        'status': 'Active',
-        'products': 156,
-        'revenue': 45000,
-        'lastUpdated': DateTime.now().subtract(const Duration(minutes: 5)),
-        'onlineUsers': 45,
-        'ordersToday': 23,
-        'carbonSaved': 12.5,
-        'trend': 'up',
-        'lastOrder': DateTime.now().subtract(const Duration(minutes: 2)),
-        'ownerId': 'admin', // To track who owns the store
-        'description': 'A sustainable store offering eco-friendly food and beverage products.',
-      },
-      {
-        'id': '2',
-        'name': 'EcoShop',
-        'category': 'Clothing & Fashion',
-        'performance': 0.72,
-        'rating': 4.1,
-        'status': 'Active',
-        'products': 89,
-        'revenue': 32000,
-        'lastUpdated': DateTime.now().subtract(const Duration(minutes: 3)),
-        'onlineUsers': 32,
-        'ordersToday': 18,
-        'carbonSaved': 8.7,
-        'trend': 'stable',
-        'lastOrder': DateTime.now().subtract(const Duration(minutes: 5)),
-        'ownerId': 'admin',
-        'description': 'Eco-friendly clothing and fashion store.',
-      },
-      {
-        'id': '3',
-        'name': 'Sustainable Store',
-        'category': 'Electronics',
-        'performance': 0.68,
-        'rating': 3.9,
-        'status': 'Inactive',
-        'products': 67,
-        'revenue': 28000,
-        'lastUpdated': DateTime.now().subtract(const Duration(minutes: 8)),
-        'onlineUsers': 28,
-        'ordersToday': 15,
-        'carbonSaved': 6.3,
-        'trend': 'down',
-        'lastOrder': DateTime.now().subtract(const Duration(minutes: 12)),
-        'ownerId': 'admin',
-        'description': 'Sustainable electronics and gadgets store.',
-      },
-      {
-        'id': '4',
-        'name': 'Green Corner',
-        'category': 'Home & Garden',
-        'performance': 0.91,
-        'rating': 4.5,
-        'status': 'Active',
-        'products': 234,
-        'revenue': 67000,
-        'lastUpdated': DateTime.now().subtract(const Duration(minutes: 2)),
-        'onlineUsers': 67,
-        'ordersToday': 34,
-        'carbonSaved': 18.2,
-        'trend': 'up',
-        'lastOrder': DateTime.now().subtract(const Duration(minutes: 1)),
-        'ownerId': 'admin',
-        'description': 'Home and garden eco-friendly products.',
-      },
-      {
-        'id': '5',
-        'name': 'EcoTech Solutions',
-        'category': 'Electronics',
-        'performance': 0.78,
-        'rating': 4.0,
-        'status': 'Inactive',
-        'products': 123,
-        'revenue': 38000,
-        'lastUpdated': DateTime.now().subtract(const Duration(minutes: 12)),
-        'onlineUsers': 41,
-        'ordersToday': 22,
-        'carbonSaved': 9.8,
-        'trend': 'up',
-        'lastOrder': DateTime.now().subtract(const Duration(minutes: 8)),
-        'ownerId': 'admin',
-        'description': 'Eco-friendly technology solutions.',
-      },
-    ];
-  }
+  List<Map<String, dynamic>> _allStores = [];
+  List<Map<String, dynamic>> _filteredStores = [];
+  bool _isLoading = false;
+  String? _error;
+  Map<String, dynamic>? _selectedStore;
 
-  // Getter for all stores
+  // Getters
   List<Map<String, dynamic>> get allStores => _allStores;
+  List<Map<String, dynamic>> get filteredStores => _filteredStores;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  Map<String, dynamic>? get selectedStore => _selectedStore;
 
-  // Get stores by owner
-  List<Map<String, dynamic>> getStoresByOwner(String ownerId) {
-    return _allStores.where((store) => store['ownerId'] == ownerId).toList();
+  // Available store categories for dropdowns
+  List<String> get availableCategories => [
+    'General Store',
+    'Specialty Store',
+    'Local Store',
+    'Premium Store',
+    'Organic Store',
+    'Electronics Store',
+    'Fashion Store',
+    'Home & Garden Store',
+    'Food & Beverages Store',
+    'Personal Care Store',
+  ];
+
+  // Available locations for dropdowns
+  List<String> get availableLocations => [
+    'Mumbai, Maharashtra',
+    'Delhi, NCR',
+    'Bangalore, Karnataka',
+    'Chennai, Tamil Nadu',
+    'Pune, Maharashtra',
+    'Hyderabad, Telangana',
+    'Kolkata, West Bengal',
+    'Ahmedabad, Gujarat',
+    'Jaipur, Rajasthan',
+    'Lucknow, Uttar Pradesh',
+  ];
+
+  // Initialize stores
+  Future<void> initializeStores() async {
+    try {
+      _setLoading(true);
+      _error = null;
+      
+      // First try to load from Firebase
+      List<Map<String, dynamic>> stores = await _storeService.getAllStores();
+      
+      if (stores.isNotEmpty) {
+        _allStores = stores;
+        _filteredStores = stores;
+        print('Stores loaded from Firebase: ${stores.length} stores');
+      } else {
+        // If Firebase is empty, initialize with sample data
+        await _storeService.initializeSampleStores();
+        stores = await _storeService.getAllStores();
+        _allStores = stores;
+        _filteredStores = stores;
+        print('Sample stores initialized and loaded: ${stores.length} stores');
+      }
+    } catch (e) {
+      print('Error initializing stores: $e');
+      _error = 'Failed to load stores: ${e.toString()}';
+      // Fallback to static data
+      _allStores = _storeService.getStaticStores();
+      _filteredStores = _allStores;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  // Get active stores
-  List<Map<String, dynamic>> get activeStores {
-    return _allStores.where((store) => store['status'] == 'Active').toList();
+  // Load stores from Firebase
+  Future<void> loadStores() async {
+    try {
+      _setLoading(true);
+      _error = null;
+      
+      List<Map<String, dynamic>> stores = await _storeService.getAllStores();
+      _allStores = stores;
+      _filteredStores = stores;
+    } catch (e) {
+      print('Error loading stores: $e');
+      _error = 'Failed to load stores: ${e.toString()}';
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  // Get total stores count
-  int get totalStores => _allStores.length;
-
-  // Get active stores count
-  int get activeStoresCount => activeStores.length;
-
-  // Add new store
-  void addStore(Map<String, dynamic> store) {
-    store['id'] = '${_allStores.length + 1}';
-    store['lastUpdated'] = DateTime.now();
-    store['performance'] = 0.5 + (Random().nextDouble() * 0.4);
-    store['rating'] = 3.5 + (Random().nextDouble() * 1.5);
-    store['products'] = 50 + Random().nextInt(200);
-    store['revenue'] = 10000 + Random().nextInt(50000);
-    store['onlineUsers'] = 10 + Random().nextInt(50);
-    store['ordersToday'] = 5 + Random().nextInt(20);
-    store['carbonSaved'] = 2.0 + (Random().nextDouble() * 10.0);
-    store['trend'] = ['up', 'stable', 'down'][Random().nextInt(3)];
-    store['lastOrder'] = DateTime.now().subtract(Duration(minutes: Random().nextInt(30)));
-    
-    _allStores.add(store);
-    notifyListeners();
+  // Add a new store
+  Future<Map<String, dynamic>> addStore(Map<String, dynamic> storeData) async {
+    try {
+      _setLoading(true);
+      _error = null;
+      
+      final result = await _storeService.addStore(storeData);
+      
+      if (result['success']) {
+        // Reload stores from Firebase
+        await loadStores();
+      }
+      
+      return result;
+    } catch (e) {
+      _error = 'Failed to add store: ${e.toString()}';
+      return {
+        'success': false,
+        'message': _error!,
+      };
+    } finally {
+      _setLoading(false);
+    }
   }
 
   // Update store
-  void updateStore(String storeId, Map<String, dynamic> updatedData) {
-    final index = _allStores.indexWhere((store) => store['id'] == storeId);
-    if (index != -1) {
-      _allStores[index].addAll(updatedData);
-      _allStores[index]['lastUpdated'] = DateTime.now();
-      notifyListeners();
+  Future<Map<String, dynamic>> updateStore(String storeId, Map<String, dynamic> updateData) async {
+    try {
+      _setLoading(true);
+      _error = null;
+      
+      final result = await _storeService.updateStore(storeId, updateData);
+      
+      if (result['success']) {
+        // Reload stores from Firebase
+        await loadStores();
+      }
+      
+      return result;
+    } catch (e) {
+      _error = 'Failed to update store: ${e.toString()}';
+      return {
+        'success': false,
+        'message': _error!,
+      };
+    } finally {
+      _setLoading(false);
     }
   }
 
   // Delete store
-  void deleteStore(String storeId) {
-    _allStores.removeWhere((store) => store['id'] == storeId);
-    notifyListeners();
+  Future<Map<String, dynamic>> deleteStore(String storeId) async {
+    try {
+      _setLoading(true);
+      _error = null;
+      
+      final result = await _storeService.deleteStore(storeId);
+      
+      if (result['success']) {
+        // Reload stores from Firebase
+        await loadStores();
+      }
+      
+      return result;
+    } catch (e) {
+      _error = 'Failed to delete store: ${e.toString()}';
+      return {
+        'success': false,
+        'message': _error!,
+      };
+    } finally {
+      _setLoading(false);
+    }
   }
 
   // Toggle store status
-  void toggleStoreStatus(String storeId) {
-    final index = _allStores.indexWhere((store) => store['id'] == storeId);
-    if (index != -1) {
-      _allStores[index]['status'] = _allStores[index]['status'] == 'Active' ? 'Inactive' : 'Active';
-      _allStores[index]['lastUpdated'] = DateTime.now();
-      notifyListeners();
+  Future<Map<String, dynamic>> toggleStoreStatus(String storeId) async {
+    try {
+      // Get current store status
+      final store = _allStores.firstWhere((s) => s['id'] == storeId);
+      final currentStatus = store['isActive'] ?? true;
+      final newStatus = !currentStatus;
+      
+      final result = await _storeService.toggleStoreStatus(storeId, newStatus);
+      
+      if (result['success']) {
+        // Reload stores from Firebase
+        await loadStores();
+      }
+      
+      return result;
+    } catch (e) {
+      _error = 'Failed to toggle store status: ${e.toString()}';
+      return {
+        'success': false,
+        'message': _error!,
+      };
     }
   }
 
@@ -178,17 +208,137 @@ class StoreProvider extends ChangeNotifier {
     return _allStores.where((store) => store['category'] == category).toList();
   }
 
-  // Get stores by status
-  List<Map<String, dynamic>> getStoresByStatus(String status) {
-    return _allStores.where((store) => store['status'] == status).toList();
+  // Get stores by location
+  List<Map<String, dynamic>> getStoresByLocation(String location) {
+    return _allStores.where((store) => store['location'] == location).toList();
   }
 
-  // Search stores by name
+  // Get stores by status
+  List<Map<String, dynamic>> getStoresByStatus(bool isActive) {
+    return _allStores.where((store) => store['isActive'] == isActive).toList();
+  }
+
+  // Get stores by owner
+  List<Map<String, dynamic>> getStoresByOwner(String ownerId) {
+    return _allStores.where((store) => store['ownerId'] == ownerId).toList();
+  }
+
+  // Search stores
   List<Map<String, dynamic>> searchStores(String query) {
-    return _allStores.where((store) => 
-      store['name'].toString().toLowerCase().contains(query.toLowerCase()) ||
-      store['category'].toString().toLowerCase().contains(query.toLowerCase())
-    ).toList();
+    if (query.isEmpty) {
+      _filteredStores = _allStores;
+    } else {
+      _filteredStores = _allStores.where((store) {
+        final name = store['name']?.toString().toLowerCase() ?? '';
+        final description = store['description']?.toString().toLowerCase() ?? '';
+        final category = store['category']?.toString().toLowerCase() ?? '';
+        final location = store['location']?.toString().toLowerCase() ?? '';
+        final ownerName = store['ownerName']?.toString().toLowerCase() ?? '';
+        
+        final searchQuery = query.toLowerCase();
+        
+        return name.contains(searchQuery) ||
+               description.contains(searchQuery) ||
+               category.contains(searchQuery) ||
+               location.contains(searchQuery) ||
+               ownerName.contains(searchQuery);
+      }).toList();
+    }
+    notifyListeners();
+    return _filteredStores;
+  }
+
+  // Search stores in Firebase
+  Future<List<Map<String, dynamic>>> searchStoresFirebase(String query) async {
+    try {
+      return await _storeService.searchStores(query);
+    } catch (e) {
+      print('Error searching stores in Firebase: $e');
+      return searchStores(query);
+    }
+  }
+
+  // Filter stores
+  void filterStores({
+    String? category,
+    String? location,
+    bool? isActive,
+    String? sortBy,
+    bool ascending = true,
+  }) {
+    _filteredStores = _allStores.where((store) {
+      bool matchesCategory = category == null || store['category'] == category;
+      bool matchesLocation = location == null || store['location'] == location;
+      bool matchesStatus = isActive == null || store['isActive'] == isActive;
+      
+      return matchesCategory && matchesLocation && matchesStatus;
+    }).toList();
+
+    // Sort stores
+    if (sortBy != null) {
+      _filteredStores.sort((a, b) {
+        dynamic aValue = a[sortBy];
+        dynamic bValue = b[sortBy];
+        
+        if (aValue == null) aValue = ascending ? double.negativeInfinity : double.infinity;
+        if (bValue == null) bValue = ascending ? double.negativeInfinity : double.infinity;
+        
+        int comparison = ascending ? 1 : -1;
+        
+        if (aValue is String && bValue is String) {
+          return ascending ? aValue.compareTo(bValue) : bValue.compareTo(aValue);
+        } else if (aValue is num && bValue is num) {
+          return ascending ? aValue.compareTo(bValue) : bValue.compareTo(aValue);
+        }
+        
+        return 0;
+      });
+    }
+
+    notifyListeners();
+  }
+
+  // Clear filters
+  void clearFilters() {
+    _filteredStores = _allStores;
+    notifyListeners();
+  }
+
+  // Set selected store
+  void setSelectedStore(Map<String, dynamic>? store) {
+    _selectedStore = store;
+    notifyListeners();
+  }
+
+  // Get store statistics
+  Future<Map<String, dynamic>> getStoreStats() async {
+    try {
+      return await _storeService.getStoreStats();
+    } catch (e) {
+      print('Error getting store stats: $e');
+      return {
+        'totalStores': _allStores.length,
+        'activeStores': _allStores.where((store) => store['isActive'] == true).length,
+        'totalProducts': _allStores.fold(0, (sum, store) => sum + ((store['totalProducts'] ?? 0) as int)),
+        'totalRevenue': _allStores.fold(0.0, (sum, store) => sum + (store['totalRevenue'] ?? 0.0)),
+        'categories': _allStores.map((store) => store['category'] ?? '').toSet().toList(),
+        'averageProductsPerStore': _allStores.isNotEmpty 
+            ? _allStores.fold(0, (sum, store) => sum + ((store['totalProducts'] ?? 0) as int)) / _allStores.length 
+            : 0.0,
+      };
+    }
+  }
+
+  // Helper method to set loading state
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  // Clear error
+  void clearError() {
+    _error = null;
+    notifyListeners();
   }
 }
 

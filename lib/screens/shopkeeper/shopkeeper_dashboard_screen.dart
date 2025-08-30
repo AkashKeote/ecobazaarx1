@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/store_provider.dart';
 import '../../providers/product_provider.dart';
@@ -1322,29 +1323,96 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
                   };
 
                   final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-                  storeProvider.addStore(newStore);
-
-                  Navigator.pop(context);
                   
+                  // Show loading
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Row(
                         children: [
-                          Icon(Icons.check_circle_rounded, color: Colors.white),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Store "${nameController.text.trim()}" added successfully!',
-                              style: GoogleFonts.poppins(),
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          Text('Adding store...', style: GoogleFonts.poppins()),
                         ],
                       ),
-                      backgroundColor: Colors.green,
-                      duration: const Duration(seconds: 3),
-                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.blue,
+                      duration: const Duration(seconds: 2),
                     ),
                   );
+                  
+                  // Add store asynchronously
+                  storeProvider.addStore(newStore).then((result) {
+                    Navigator.pop(context);
+                    
+                    if (result['success']) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Colors.white),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  result['message'] ?? 'Store "${nameController.text.trim()}" added successfully!',
+                                  style: GoogleFonts.poppins(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 3),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.error_rounded, color: Colors.white),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  result['message'] ?? 'Failed to add store!',
+                                  style: GoogleFonts.poppins(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.red,
+                          duration: const Duration(seconds: 3),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }).catchError((error) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.error_rounded, color: Colors.white),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Error adding store: ${error.toString()}',
+                                style: GoogleFonts.poppins(),
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  });
                 },
                 icon: const Icon(Icons.add_business_rounded),
                 label: Text('Add Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
@@ -1501,36 +1569,409 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: store['status'] == 'Active' ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        store['status'],
-                        style: TextStyle(
-                          color: store['status'] == 'Active' ? Colors.green : Colors.red,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                    Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: store['status'] == 'Active' ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            store['status'],
+                            style: TextStyle(
+                              color: store['status'] == 'Active' ? Colors.green : Colors.red,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Edit Store Button
+                            GestureDetector(
+                              onTap: () => _showEditStoreDialogShopkeeper(store),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFB5C7F7).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.edit_outlined,
+                                  color: const Color(0xFFB5C7F7),
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Delete Store Button
+                            GestureDetector(
+                              onTap: () => _showDeleteStoreDialogShopkeeper(store),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: Colors.red,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
               )).toList(),
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  print('Test button clicked!');
-                  _showAddStoreDialog(context);
-                },
-                child: const Text('Test Add Store'),
-              ),
+            
             ],
           ),
         );
       },
+    );
+  }
+
+  void _showEditStoreDialogShopkeeper(Map<String, dynamic> store) {
+    final TextEditingController nameController = TextEditingController(text: store['name'] ?? '');
+    final TextEditingController descriptionController = TextEditingController(text: store['description'] ?? '');
+    final TextEditingController categoryController = TextEditingController(text: store['category'] ?? '');
+    final TextEditingController locationController = TextEditingController(text: store['location'] ?? '');
+    final TextEditingController ownerNameController = TextEditingController(text: store['ownerName'] ?? '');
+    final TextEditingController ownerEmailController = TextEditingController(text: store['ownerEmail'] ?? '');
+    final TextEditingController ownerPhoneController = TextEditingController(text: store['ownerPhone'] ?? '');
+    final TextEditingController addressController = TextEditingController(text: store['address'] ?? '');
+    
+    String selectedCategory = store['category'] ?? 'Clothing';
+    bool isActive = store['isActive'] ?? true;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.edit_rounded, color: const Color(0xFFB5C7F7), size: 28),
+              const SizedBox(width: 12),
+              Text('Edit My Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Update your store information:',
+                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 16),
+                
+                // Store Name
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Store Name',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.store_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Description
+                TextField(
+                  controller: descriptionController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.description_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Category Dropdown
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: 'Category',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.category_rounded),
+                  ),
+                  items: [
+                    'Clothing',
+                    'Accessories',
+                    'Electronics',
+                    'Personal Care',
+                    'Food & Beverages',
+                    'Home & Garden',
+                    'Books',
+                    'Sports',
+                    'Beauty',
+                    'Other'
+                  ].map((category) => DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  )).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedCategory = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                
+                // Location
+                TextField(
+                  controller: locationController,
+                  decoration: InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.location_on_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Owner Name
+                TextField(
+                  controller: ownerNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Owner Name',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.person_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Owner Email
+                TextField(
+                  controller: ownerEmailController,
+                  decoration: InputDecoration(
+                    labelText: 'Owner Email',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.email_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Owner Phone
+                TextField(
+                  controller: ownerPhoneController,
+                  decoration: InputDecoration(
+                    labelText: 'Owner Phone',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.phone_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Address
+                TextField(
+                  controller: addressController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'Address',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.home_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Active Status
+                Row(
+                  children: [
+                    Icon(Icons.toggle_on_rounded, color: isActive ? Colors.green : Colors.grey),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Store Active',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    ),
+                    const Spacer(),
+                    Switch(
+                      value: isActive,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          isActive = value;
+                        });
+                      },
+                      activeColor: const Color(0xFFB5C7F7),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.poppins()),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+                  
+                  final updateData = {
+                    'name': nameController.text.trim(),
+                    'description': descriptionController.text.trim(),
+                    'category': selectedCategory,
+                    'location': locationController.text.trim(),
+                    'ownerName': ownerNameController.text.trim(),
+                    'ownerEmail': ownerEmailController.text.trim(),
+                    'ownerPhone': ownerPhoneController.text.trim(),
+                    'address': addressController.text.trim(),
+                    'isActive': isActive,
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  };
+                  
+                  final result = await storeProvider.updateStore(store['id'], updateData);
+                  
+                  Navigator.pop(context);
+                  
+                  if (result['success']) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result['message'] ?? 'Store "${store['name']}" updated successfully!', style: GoogleFonts.poppins()),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result['message'] ?? 'Failed to update store!', style: GoogleFonts.poppins()),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating store: ${e.toString()}', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB5C7F7),
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Update Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteStoreDialogShopkeeper(Map<String, dynamic> store) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Text('Delete My Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to permanently delete your store?',
+              style: GoogleFonts.poppins(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Store: ${store['name']}',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  Text(
+                    'Category: ${store['category']}',
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  Text(
+                    'Location: ${store['location']}',
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '⚠️ This action cannot be undone. All store data will be permanently removed from the database.',
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.red[700]),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+                final result = await storeProvider.deleteStore(store['id']);
+                
+                Navigator.pop(context);
+                
+                if (result['success']) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['message'] ?? 'Store "${store['name']}" deleted successfully!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.green,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['message'] ?? 'Failed to delete store!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting store: ${e.toString()}', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete Permanently', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1836,12 +2277,12 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: product['color'].withOpacity(0.2),
+                      color: _parseColor(product['color']).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      product['icon'],
-                      color: product['color'],
+                      _getIconFromString(product['icon']),
+                      color: _parseColor(product['color']),
                       size: 30,
                     ),
                   ),
@@ -1872,7 +2313,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: product['color'],
+                            color: _parseColor(product['color']),
                           ),
                         ),
                       ],
@@ -2019,7 +2460,7 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Are you sure you want to delete "${product['name']}"? This action cannot be undone.',
+          'Are you sure you want to PERMANENTLY delete "${product['name']}"?\n\n⚠️ This action will completely remove the product from the database and cannot be undone!',
           style: GoogleFonts.poppins(),
         ),
         actions: [
@@ -2028,17 +2469,37 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
             child: Text('Cancel', style: GoogleFonts.poppins()),
           ),
           ElevatedButton(
-            onPressed: () {
-              Provider.of<ProductProvider>(context, listen: false).deleteProduct(product['id']);
-              Navigator.pop(context);
-              Navigator.pop(context);
-              _showManageStock(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Product deleted successfully!', style: GoogleFonts.poppins()),
-                  backgroundColor: Colors.red,
-                ),
-              );
+            onPressed: () async {
+              try {
+                final result = await Provider.of<ProductProvider>(context, listen: false).deleteProduct(product['id']);
+                
+                Navigator.pop(context); // Close dialog
+                
+                if (result['success']) {
+                  _showManageStock(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['message'] ?? 'Product deleted successfully!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['message'] ?? 'Failed to delete product!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                Navigator.pop(context); // Close dialog
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting product: ${e.toString()}', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text('Delete', style: GoogleFonts.poppins(color: Colors.white)),
@@ -2350,11 +2811,15 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (nameController.text.isNotEmpty &&
                       priceController.text.isNotEmpty &&
                       quantityController.text.isNotEmpty &&
                       descriptionController.text.isNotEmpty) {
+                    
+                    // Convert Color to hex string and IconData to string
+                    String colorHex = '#${selectedColor.value.toRadixString(16).padLeft(8, '0')}';
+                    String iconString = _getIconString(selectedIcon);
                     
                     final newProduct = {
                       'name': nameController.text,
@@ -2363,24 +2828,67 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
                       'quantity': int.tryParse(quantityController.text) ?? 0,
                       'material': selectedMaterial,
                       'description': descriptionController.text,
-                      'color': selectedColor,
-                      'icon': selectedIcon,
+                      'color': colorHex,
+                      'icon': iconString,
                       'storeId': 'shopkeeper',
                       'storeName': 'My Store',
                     };
                     
-                    Provider.of<ProductProvider>(context, listen: false).addProduct(newProduct);
-                    
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Product "${nameController.text}" added successfully!',
-                          style: GoogleFonts.poppins(),
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
+                    // Show loading indicator
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (BuildContext context) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFB5C7F7)),
+                          ),
+                        );
+                      },
                     );
+
+                    try {
+                      final result = await Provider.of<ProductProvider>(context, listen: false).addProduct(newProduct);
+                      
+                      // Hide loading indicator
+                      Navigator.pop(context);
+                      
+                      if (result['success']) {
+                        Navigator.pop(context); // Close the add product dialog
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              result['message'] ?? 'Product "${nameController.text}" added successfully!',
+                              style: GoogleFonts.poppins(),
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              result['message'] ?? 'Failed to add product!',
+                              style: GoogleFonts.poppins(),
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      // Hide loading indicator
+                      Navigator.pop(context);
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Error adding product: ${e.toString()}',
+                            style: GoogleFonts.poppins(),
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -2418,6 +2926,74 @@ class _ShopkeeperDashboardScreenState extends State<ShopkeeperDashboardScreen>
     );
   }
 }
+
+// Helper method to parse color string to Color object
+Color _parseColor(String? colorString) {
+  if (colorString == null || colorString.isEmpty) {
+    return const Color(0xFFB5C7F7); // Default color
+  }
+  
+  try {
+    // Remove # if present
+    String hex = colorString.startsWith('#') ? colorString.substring(1) : colorString;
+    
+    // Handle different hex formats
+    if (hex.length == 6) {
+      return Color(int.parse('FF$hex', radix: 16));
+    } else if (hex.length == 8) {
+      return Color(int.parse(hex, radix: 16));
+    } else {
+      return const Color(0xFFB5C7F7); // Default color
+    }
+  } catch (e) {
+    print('Error parsing color: $colorString - $e');
+    return const Color(0xFFB5C7F7); // Default color
+  }
+}
+
+  // Helper method to get icon from string
+  IconData _getIconFromString(String? iconString) {
+    if (iconString == null || iconString.isEmpty) {
+      return Icons.shopping_bag_rounded; // Default icon
+    }
+    
+    // Map of string to IconData
+    final iconMap = {
+      'checkroom_rounded': Icons.checkroom_rounded,
+      'water_drop_rounded': Icons.water_drop_rounded,
+      'solar_power_rounded': Icons.solar_power_rounded,
+      'shopping_bag_rounded': Icons.shopping_bag_rounded,
+      'brush_rounded': Icons.brush_rounded,
+      'spa_rounded': Icons.spa_rounded,
+      'book_rounded': Icons.book_rounded,
+      'face_rounded': Icons.face_rounded,
+      'fitness_center_rounded': Icons.fitness_center_rounded,
+      'local_florist_rounded': Icons.local_florist_rounded,
+      'local_cafe_rounded': Icons.local_cafe_rounded,
+    };
+    
+    return iconMap[iconString] ?? Icons.shopping_bag_rounded;
+  }
+
+  // Helper method to convert IconData to string
+  String _getIconString(IconData icon) {
+    // Map of IconData to string
+    final iconMap = {
+      Icons.checkroom_rounded: 'checkroom_rounded',
+      Icons.water_drop_rounded: 'water_drop_rounded',
+      Icons.solar_power_rounded: 'solar_power_rounded',
+      Icons.shopping_bag_rounded: 'shopping_bag_rounded',
+      Icons.brush_rounded: 'brush_rounded',
+      Icons.spa_rounded: 'spa_rounded',
+      Icons.book_rounded: 'book_rounded',
+      Icons.face_rounded: 'face_rounded',
+      Icons.fitness_center_rounded: 'fitness_center_rounded',
+      Icons.local_florist_rounded: 'local_florist_rounded',
+      Icons.local_cafe_rounded: 'local_cafe_rounded',
+    };
+    
+    return iconMap[icon] ?? 'shopping_bag_rounded';
+  }
 
 // Widget classes moved outside the main state class
 class _PastelStatCard extends StatelessWidget {

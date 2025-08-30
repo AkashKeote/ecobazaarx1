@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../providers/product_view_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> product;
@@ -74,11 +75,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         productId: widget.product['id'],
         name: widget.product['name'],
         description: widget.product['description'],
-        price: widget.product['price'].toDouble(),
-        icon: widget.product['icon'],
-        color: widget.product['color'],
+        price: _parseDouble(widget.product['price']),
+        icon: _getIconFromString(widget.product['icon']),
+        color: _parseColor(widget.product['color']),
         category: widget.product['category'],
-        carbonFootprint: widget.product['carbonFootprint'].toDouble(),
+        carbonFootprint: _parseDouble(widget.product['carbonFootprint']),
       );
     }
 
@@ -135,41 +136,77 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                           ),
                         ),
                         const Spacer(),
-                        Consumer<WishlistProvider>(
-                          builder: (context, wishlistProvider, child) {
+                        Consumer2<WishlistProvider, AuthProvider>(
+                          builder: (context, wishlistProvider, authProvider, child) {
                             final isInWishlist = wishlistProvider.isInWishlist(widget.product['id']);
+                            final currentUserId = authProvider.firebaseUser?.uid;
+                            
                             return IconButton(
-                              onPressed: () {
+                              onPressed: () async {
+                                if (currentUserId == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Please login to manage wishlist',
+                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                      ),
+                                      backgroundColor: Colors.orange[300],
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                
                                 if (isInWishlist) {
-                                  wishlistProvider.removeFromWishlist(widget.product['id']);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Removed from wishlist!',
-                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                                      ),
-                                      backgroundColor: Colors.red[300],
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
+                                  final success = await wishlistProvider.removeFromWishlist(
+                                    userId: currentUserId,
+                                    productId: widget.product['id'],
                                   );
+                                  if (success) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Removed from wishlist!',
+                                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                        ),
+                                        backgroundColor: Colors.red[300],
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 } else {
-                                  wishlistProvider.addToWishlist(widget.product);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Added to wishlist!',
-                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                                      ),
-                                      backgroundColor: const Color(0xFFF9E79F),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
+                                  final success = await wishlistProvider.addToWishlist(
+                                    userId: currentUserId,
+                                    productId: widget.product['id'],
+                                    productName: widget.product['name'],
+                                    productDescription: widget.product['description'],
+                                                                         productPrice: _parseDouble(widget.product['price']),
+                                    productCategory: widget.product['category'],
+                                                                         productColor: widget.product['color'] is String ? widget.product['color'] : '#B5C7F7',
+                                                                         productIcon: widget.product['icon'] is String ? widget.product['icon'] : 'shopping_bag_rounded',
+                                                                         carbonFootprint: _parseDouble(widget.product['carbonFootprint']),
                                   );
+                                  if (success) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Added to wishlist!',
+                                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                                        ),
+                                        backgroundColor: const Color(0xFFF9E79F),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 }
                               },
                               icon: Container(
@@ -198,20 +235,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                     height: 200,
                     margin: const EdgeInsets.symmetric(horizontal: 24),
                     decoration: BoxDecoration(
-                      color: widget.product['color'].withOpacity(0.2),
+                      color: _parseColor(widget.product['color']).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: widget.product['color'].withOpacity(0.3),
+                          color: _parseColor(widget.product['color']).withOpacity(0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
                       ],
                     ),
                     child: Icon(
-                      widget.product['icon'],
+                      _getIconFromString(widget.product['icon']),
                       size: 120,
-                      color: widget.product['color'],
+                      color: _parseColor(widget.product['color']),
                     ),
                   ),
                 ),
@@ -249,7 +286,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                               ),
                             ),
                                                          Text(
-                               '₹${widget.product['price'].toStringAsFixed(2)}',
+                               '₹${_parseDouble(widget.product['price']).toStringAsFixed(2)}',
                                style: GoogleFonts.poppins(
                                  fontSize: 24,
                                  fontWeight: FontWeight.bold,
@@ -293,7 +330,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Text(
-                                '${widget.product['quantity']} in stock',
+                                '${_parseInt(widget.product['quantity'])} in stock',
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -320,7 +357,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                         // Carbon Footprint
                         _buildEnvironmentalImpactCard(
                           'Carbon Footprint',
-                          '${widget.product['carbonFootprint']} kg CO₂',
+                          '${_parseDouble(widget.product['carbonFootprint']).toStringAsFixed(1)} kg CO₂',
                           Icons.eco_rounded,
                           Colors.green,
                         ),
@@ -328,7 +365,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                         // Water Saved
                         _buildEnvironmentalImpactCard(
                           'Water Saved',
-                          '${widget.product['waterSaved']} L',
+                          '${_parseDouble(widget.product['waterSaved']).toStringAsFixed(0)} L',
                           Icons.water_drop_rounded,
                           Colors.blue,
                         ),
@@ -336,7 +373,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                         // Energy Saved
                         _buildEnvironmentalImpactCard(
                           'Energy Saved',
-                          '${widget.product['energySaved']} kWh',
+                          '${_parseDouble(widget.product['energySaved']).toStringAsFixed(1)} kWh',
                           Icons.electric_bolt_rounded,
                           Colors.orange,
                         ),
@@ -344,7 +381,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                         // Waste Reduced
                         _buildEnvironmentalImpactCard(
                           'Waste Reduced',
-                          '${widget.product['wasteReduced']} kg',
+                          '${_parseDouble(widget.product['wasteReduced']).toStringAsFixed(1)} kg',
                           Icons.delete_sweep_rounded,
                           Colors.purple,
                         ),
@@ -352,7 +389,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                         // Trees Equivalent
                         _buildEnvironmentalImpactCard(
                           'Trees Equivalent',
-                          '${widget.product['treesEquivalent']} trees',
+                          '${_parseDouble(widget.product['treesEquivalent']).toStringAsFixed(0)} trees',
                           Icons.forest_rounded,
                           Colors.teal,
                         ),
@@ -446,7 +483,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                   ),
                                   IconButton(
                                     onPressed: () {
-                                      if (_quantity < widget.product['quantity']) {
+                                                                             if (_quantity < _parseInt(widget.product['quantity'])) {
                                         setState(() {
                                           _quantity++;
                                         });
@@ -489,7 +526,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                                 ),
                                 const SizedBox(width: 12),
                                                                  Text(
-                                   'Add to Cart - ₹${(_quantity * widget.product['price']).toStringAsFixed(2)}',
+                                   'Add to Cart - ₹${(_quantity * _parseDouble(widget.product['price'])).toStringAsFixed(2)}',
                                    style: GoogleFonts.poppins(
                                      fontSize: 16,
                                      fontWeight: FontWeight.w600,
@@ -557,5 +594,81 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         ],
       ),
     );
+  }
+
+  // Helper method to parse color string to Color object
+  Color _parseColor(String? colorString) {
+    if (colorString == null || colorString.isEmpty) {
+      return const Color(0xFFB5C7F7);
+    }
+    
+    try {
+      String hex = colorString.startsWith('#') ? colorString.substring(1) : colorString;
+      
+      if (hex.length == 6) {
+        return Color(int.parse('FF$hex', radix: 16));
+      } else if (hex.length == 8) {
+        return Color(int.parse(hex, radix: 16));
+      } else {
+        return const Color(0xFFB5C7F7);
+      }
+    } catch (e) {
+      return const Color(0xFFB5C7F7);
+    }
+  }
+
+  // Helper method to get icon from string
+  IconData _getIconFromString(String? iconString) {
+    if (iconString == null || iconString.isEmpty) {
+      return Icons.shopping_bag_rounded;
+    }
+    
+    final iconMap = {
+      'checkroom_rounded': Icons.checkroom_rounded,
+      'water_drop_rounded': Icons.water_drop_rounded,
+      'solar_power_rounded': Icons.solar_power_rounded,
+      'shopping_bag_rounded': Icons.shopping_bag_rounded,
+      'brush_rounded': Icons.brush_rounded,
+      'spa_rounded': Icons.spa_rounded,
+      'book_rounded': Icons.book_rounded,
+      'face_rounded': Icons.face_rounded,
+      'fitness_center_rounded': Icons.fitness_center_rounded,
+      'local_florist_rounded': Icons.local_florist_rounded,
+      'local_cafe_rounded': Icons.local_cafe_rounded,
+      'eco_rounded': Icons.eco_rounded,
+      'recycling_rounded': Icons.recycling_rounded,
+      'park_rounded': Icons.park_rounded,
+      'forest_rounded': Icons.forest_rounded,
+      'local_drink_rounded': Icons.local_drink_rounded,
+      'directions_bus_rounded': Icons.directions_bus_rounded,
+      'directions_walk_rounded': Icons.directions_walk_rounded,
+      'restaurant_rounded': Icons.restaurant_rounded,
+      'lightbulb_rounded': Icons.lightbulb_rounded,
+      'store_rounded': Icons.store_rounded,
+    };
+    
+    return iconMap[iconString] ?? Icons.shopping_bag_rounded;
+  }
+
+  // Helper method to safely parse numeric values
+  double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  // Helper method to safely parse integer values
+  int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    return 0;
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'dart:math';
 import '../../providers/auth_provider.dart';
@@ -25,16 +26,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   int _activeSessions = 347;
   double _systemUptime = 99.8;
   
-  // Get real active stores count from centralized store data
+    // Get real active stores count from centralized store data
   int get _activeStores {
     final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-    return storeProvider.activeStoresCount;
+    return storeProvider.getStoresByStatus(true).length;
   }
-  
+
   // Get total stores count from centralized store data
   int get _totalStores {
     final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-    return storeProvider.totalStores;
+    return storeProvider.allStores.length;
   }
   
   // Get real total users count from AuthProvider
@@ -268,7 +269,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   void _addNewStore() {
     final storeProvider = Provider.of<StoreProvider>(context, listen: false);
     // Very low probability to add a new store (0.1% chance every 5 seconds)
-    if (Random().nextDouble() < 0.001 && storeProvider.totalStores < 20) {
+          if (Random().nextDouble() < 0.001 && storeProvider.allStores.length < 20) {
       List<String> storeNames = [
         'EcoFresh Market',
         'Green Living Store',
@@ -1795,7 +1796,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         builder: (context, setState) {
           return Consumer<StoreProvider>(
                                     builder: (context, storeProvider, child) {
-                          print('Admin Consumer rebuilding - Total stores: ${storeProvider.totalStores}');
+                          print('Admin Consumer rebuilding - Total stores: ${storeProvider.allStores.length}');
                           print('All stores: ${storeProvider.allStores.map((s) => s['name']).join(', ')}');
                           return Container(
             height: MediaQuery.of(context).size.height * 0.9,
@@ -1854,11 +1855,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         Row(
                           children: [
                             Expanded(
-                              child: _buildStoreManagementCard('Total Stores', '${storeProvider.totalStores}', Icons.store_rounded, const Color(0xFFB5C7F7)),
+                              child: _buildStoreManagementCard('Total Stores', '${storeProvider.allStores.length}', Icons.store_rounded, const Color(0xFFB5C7F7)),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
-                              child: _buildStoreManagementCard('Active Stores', '${storeProvider.activeStoresCount}', Icons.storefront_rounded, const Color(0xFFD6EAF8)),
+                              child: _buildStoreManagementCard('Active Stores', '${storeProvider.getStoresByStatus(true).length}', Icons.storefront_rounded, const Color(0xFFD6EAF8)),
                             ),
                           ],
                         ),
@@ -1882,17 +1883,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             const SizedBox(width: 16),
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () => _showStoreFilterDialog(context),
-                                icon: const Icon(Icons.filter_list_rounded),
-                                label: Text('Filter', style: GoogleFonts.poppins()),
+                                onPressed: () => _showManageStoresDialog(context),
+                                icon: const Icon(Icons.manage_accounts_rounded),
+                                label: Text('Manage Stores', style: GoogleFonts.poppins()),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFF9E79F),
+                                  backgroundColor: const Color(0xFFD6EAF8),
                                   foregroundColor: const Color(0xFF22223B),
                                   padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Filter Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showStoreFilterDialog(context),
+                            icon: const Icon(Icons.filter_list_rounded),
+                            label: Text('Filter Stores', style: GoogleFonts.poppins()),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFF9E79F),
+                              foregroundColor: const Color(0xFF22223B),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 24),
                         
@@ -1918,7 +1935,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Total Stores: ${storeProvider.totalStores}',
+                                'Total Stores: ${storeProvider.allStores.length}',
                                 style: GoogleFonts.poppins(fontSize: 12),
                               ),
                               Text(
@@ -1929,7 +1946,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               ElevatedButton(
                                 onPressed: () {
                                   print('Admin debug button pressed!');
-                                  print('Current store count before adding: ${storeProvider.totalStores}');
+                                  print('Current store count before adding: ${storeProvider.allStores.length}');
                                   print('All stores before: ${storeProvider.allStores.map((s) => s['name']).join(', ')}');
                                   
                                   final newStore = {
@@ -1942,7 +1959,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   
                                   storeProvider.addStore(newStore);
                                   
-                                  print('Store count after adding: ${storeProvider.totalStores}');
+                                                                      print('Store count after adding: ${storeProvider.allStores.length}');
                                   print('All stores after: ${storeProvider.allStores.map((s) => s['name']).join(', ')}');
                                   
                                   setState(() {}); // Force rebuild
@@ -2110,13 +2127,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                          const SizedBox(height: 12),
                          Consumer<StoreProvider>(
                            builder: (context, storeProvider, child) {
-                             return _buildStoreStatCard('Total Products', '${storeProvider.allStores.fold<int>(0, (sum, store) => sum + (store['products'] as int))}', Icons.inventory_rounded, const Color(0xFFF9E79F));
+                             final totalProducts = storeProvider.allStores.fold<int>(0, (sum, store) => sum + ((store['products'] as num?) ?? 0).toInt());
+                             return _buildStoreStatCard('Total Products', '$totalProducts', Icons.inventory_rounded, const Color(0xFFF9E79F));
                            },
                          ),
                          const SizedBox(height: 12),
                          Consumer<StoreProvider>(
                            builder: (context, storeProvider, child) {
-                             return _buildStoreStatCard('Avg. Rating', '${(storeProvider.allStores.fold<double>(0.0, (sum, store) => sum + (store['rating'] as double)) / storeProvider.totalStores).toStringAsFixed(1)}★', Icons.star_rounded, const Color(0xFFE8D5C4));
+                             if (storeProvider.allStores.isEmpty) {
+                               return _buildStoreStatCard('Avg. Rating', '0.0★', Icons.star_rounded, const Color(0xFFE8D5C4));
+                             }
+                             final totalRating = storeProvider.allStores.fold<double>(0.0, (sum, store) => sum + ((store['rating'] as num?) ?? 0.0).toDouble());
+                             final avgRating = totalRating / storeProvider.allStores.length;
+                             return _buildStoreStatCard('Avg. Rating', '${avgRating.toStringAsFixed(1)}★', Icons.star_rounded, const Color(0xFFE8D5C4));
                            },
                          ),
                        ],
@@ -4126,8 +4149,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildEnhancedStorePerformanceBar(Map<String, dynamic> store) {
-    final performance = store['performance'] as double;
-    final color = _getCategoryColor(store['category'] as String);
+    // Add null safety for all store fields
+    final performance = (store['performance'] as double?) ?? 0.0;
+    final category = store['category'] as String? ?? 'Other';
+    final color = _getCategoryColor(category);
+    final name = store['name'] as String? ?? 'Unknown Store';
+    final trend = store['trend'] as String? ?? 'flat';
+    final revenue = store['revenue'] as num? ?? 0;
+    final products = store['products'] as num? ?? 0;
+    final onlineUsers = store['onlineUsers'] as num? ?? 0;
     
     IconData getTrendIcon(String trend) {
       switch (trend) {
@@ -4169,14 +4199,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      store['name'] as String,
+                      name,
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
                     ),
                     Text(
-                      store['category'] as String,
+                      category,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -4188,8 +4218,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               Row(
                 children: [
                   Icon(
-                    getTrendIcon(store['trend']),
-                    color: getTrendColor(store['trend']),
+                    getTrendIcon(trend),
+                    color: getTrendColor(trend),
                     size: 16,
                   ),
                   const SizedBox(width: 8),
@@ -4199,6 +4229,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                       fontWeight: FontWeight.bold,
                       color: color,
                       fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Edit Store Button
+                  GestureDetector(
+                    onTap: () => _showEditStoreDialogAnalytics(store),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFB5C7F7).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.edit_outlined,
+                        color: const Color(0xFFB5C7F7),
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Delete Store Button
+                  GestureDetector(
+                    onTap: () => _showDeleteStoreDialogAnalytics(store),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red,
+                        size: 16,
+                      ),
                     ),
                   ),
                 ],
@@ -4217,21 +4281,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Revenue: ₹${store['revenue'].toStringAsFixed(0)}',
+                'Revenue: ₹${revenue.toStringAsFixed(0)}',
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   color: Colors.grey[600],
                 ),
               ),
               Text(
-                'Products: ${store['products']}',
+                'Products: ${products}',
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   color: Colors.grey[600],
                 ),
               ),
               Text(
-                'Online: ${store['onlineUsers']}',
+                'Online: ${onlineUsers}',
                 style: GoogleFonts.poppins(
                   fontSize: 12,
                   color: Colors.grey[600],
@@ -4245,10 +4309,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
      Widget _buildStorePerformanceBar(Map<String, dynamic> store) {
-     final performance = store['performance'] as double;
-     final color = _getCategoryColor(store['category'] as String);
-     final lastUpdated = store['lastUpdated'] as DateTime;
+     // Add null safety for all store fields
+     final performance = (store['performance'] as double?) ?? 0.0;
+     final category = store['category'] as String? ?? 'Other';
+     final color = _getCategoryColor(category);
+     final name = store['name'] as String? ?? 'Unknown Store';
+     final lastUpdated = store['lastUpdated'] as DateTime? ?? DateTime.now();
      final timeAgo = _getTimeAgo(lastUpdated);
+     final products = store['products'] as num? ?? 0;
+     final revenue = store['revenue'] as num? ?? 0;
+     final rating = store['rating'] as num? ?? 0.0;
      
      return Container(
        padding: const EdgeInsets.all(12),
@@ -4268,14 +4338,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                    crossAxisAlignment: CrossAxisAlignment.start,
                    children: [
                      Text(
-                       store['name'] as String,
+                       name,
                        style: GoogleFonts.poppins(
                          fontWeight: FontWeight.w600,
                          fontSize: 14,
                        ),
                      ),
                      Text(
-                       store['category'] as String,
+                       category,
                        style: GoogleFonts.poppins(
                          fontSize: 12,
                          color: Colors.grey[600],
@@ -4284,22 +4354,60 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                    ],
                  ),
                ),
-               Column(
-                 crossAxisAlignment: CrossAxisAlignment.end,
+               Row(
                  children: [
-                   Text(
-                     '${(performance * 100).round()}%',
-                     style: GoogleFonts.poppins(
-                       fontWeight: FontWeight.bold,
-                       color: color,
-                       fontSize: 16,
+                   Column(
+                     crossAxisAlignment: CrossAxisAlignment.end,
+                     children: [
+                       Text(
+                         '${(performance * 100).round()}%',
+                         style: GoogleFonts.poppins(
+                           fontWeight: FontWeight.bold,
+                           color: color,
+                           fontSize: 16,
+                         ),
+                       ),
+                       Text(
+                         'Updated $timeAgo',
+                         style: GoogleFonts.poppins(
+                           fontSize: 10,
+                           color: Colors.grey[500],
+                         ),
+                       ),
+                     ],
+                   ),
+                   const SizedBox(width: 12),
+                   // Edit Store Button
+                   GestureDetector(
+                     onTap: () => _showEditStoreDialogAnalytics(store),
+                     child: Container(
+                       padding: const EdgeInsets.all(6),
+                       decoration: BoxDecoration(
+                         color: const Color(0xFFB5C7F7).withOpacity(0.1),
+                         borderRadius: BorderRadius.circular(8),
+                       ),
+                       child: Icon(
+                         Icons.edit_outlined,
+                         color: const Color(0xFFB5C7F7),
+                         size: 16,
+                       ),
                      ),
                    ),
-                   Text(
-                     'Updated $timeAgo',
-                     style: GoogleFonts.poppins(
-                       fontSize: 10,
-                       color: Colors.grey[500],
+                   const SizedBox(width: 8),
+                   // Delete Store Button
+                   GestureDetector(
+                     onTap: () => _showDeleteStoreDialogAnalytics(store),
+                     child: Container(
+                       padding: const EdgeInsets.all(6),
+                       decoration: BoxDecoration(
+                         color: Colors.red.withOpacity(0.1),
+                         borderRadius: BorderRadius.circular(8),
+                       ),
+                       child: Icon(
+                         Icons.delete_outline_rounded,
+                         color: Colors.red,
+                         size: 16,
+                       ),
                      ),
                    ),
                  ],
@@ -4317,15 +4425,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
              mainAxisAlignment: MainAxisAlignment.spaceBetween,
              children: [
                Text(
-                 'Products: ${store['products']}',
+                 'Products: ${products}',
                  style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
                ),
                Text(
-                 'Revenue: ₹${(store['revenue'] as int).toStringAsFixed(0)}',
+                 'Revenue: ₹${revenue.toStringAsFixed(0)}',
                  style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
                ),
                Text(
-                 'Rating: ${store['rating']}★',
+                 'Rating: ${rating}★',
                  style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600]),
                ),
              ],
@@ -5901,29 +6009,96 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   };
 
                   final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-                  storeProvider.addStore(newStore);
-                 
-                Navigator.pop(context);
                   
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
+                  // Show loading
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
                       content: Row(
                         children: [
-                          Icon(Icons.check_circle_rounded, color: Colors.white),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Store "${nameController.text.trim()}" added successfully!',
-                              style: GoogleFonts.poppins(),
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          Text('Adding store...', style: GoogleFonts.poppins()),
                         ],
                       ),
-                    backgroundColor: Colors.green,
-                      duration: const Duration(seconds: 3),
-                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.blue,
+                      duration: const Duration(seconds: 2),
                     ),
                   );
+                  
+                  // Add store asynchronously
+                  storeProvider.addStore(newStore).then((result) {
+                    Navigator.pop(context);
+                    
+                    if (result['success']) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Colors.white),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  result['message'] ?? 'Store "${nameController.text.trim()}" added successfully!',
+                                  style: GoogleFonts.poppins(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 3),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.error_rounded, color: Colors.white),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  result['message'] ?? 'Failed to add store!',
+                                  style: GoogleFonts.poppins(),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.red,
+                          duration: const Duration(seconds: 3),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }).catchError((error) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.error_rounded, color: Colors.white),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Error adding store: ${error.toString()}',
+                                style: GoogleFonts.poppins(),
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  });
                 },
                 icon: const Icon(Icons.add_business_rounded),
                 label: Text('Add Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
@@ -5954,19 +6129,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-              storeProvider.deleteStore(store['id']);
-              setState(() {
-                // Refresh the UI
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Store "${store['name']}" deleted successfully!', style: GoogleFonts.poppins()),
-                  backgroundColor: Colors.red,
-                ),
-              );
+            onPressed: () async {
+              try {
+                final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+                final result = await storeProvider.deleteStore(store['id']);
+                
+                Navigator.pop(context);
+                
+                if (result['success']) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['message'] ?? 'Store "${store['name']}" deleted successfully!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['message'] ?? 'Failed to delete store!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting store: ${e.toString()}', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
@@ -5976,16 +6169,549 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  void _toggleStoreStatus(Map<String, dynamic> store) {
-    final storeProvider = Provider.of<StoreProvider>(context, listen: false);
-    storeProvider.toggleStoreStatus(store['id']);
-    setState(() {
-      // Refresh the UI
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Store "${store['name']}" status changed to ${store['status']}!', style: GoogleFonts.poppins()),
-        backgroundColor: Colors.blue,
+  void _showEditStoreDialogAnalytics(Map<String, dynamic> store) {
+    final TextEditingController nameController = TextEditingController(text: store['name'] ?? '');
+    final TextEditingController descriptionController = TextEditingController(text: store['description'] ?? '');
+    final TextEditingController categoryController = TextEditingController(text: store['category'] ?? '');
+    final TextEditingController locationController = TextEditingController(text: store['location'] ?? '');
+    final TextEditingController ownerNameController = TextEditingController(text: store['ownerName'] ?? '');
+    final TextEditingController ownerEmailController = TextEditingController(text: store['ownerEmail'] ?? '');
+    final TextEditingController ownerPhoneController = TextEditingController(text: store['ownerPhone'] ?? '');
+    final TextEditingController addressController = TextEditingController(text: store['address'] ?? '');
+    
+    String selectedCategory = store['category'] ?? 'Clothing';
+    bool isActive = store['isActive'] ?? true;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.edit_rounded, color: const Color(0xFFB5C7F7), size: 28),
+              const SizedBox(width: 12),
+              Text('Edit Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Update store information:',
+                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 16),
+                
+                // Store Name
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Store Name',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.store_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Description
+                TextField(
+                  controller: descriptionController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.description_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Category Dropdown
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: 'Category',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.category_rounded),
+                  ),
+                  items: [
+                    'Clothing',
+                    'Accessories',
+                    'Electronics',
+                    'Personal Care',
+                    'Food & Beverages',
+                    'Home & Garden',
+                    'Books',
+                    'Sports',
+                    'Beauty',
+                    'Other'
+                  ].map((category) => DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  )).toList(),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedCategory = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                
+                // Location
+                TextField(
+                  controller: locationController,
+                  decoration: InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.location_on_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Owner Name
+                TextField(
+                  controller: ownerNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Owner Name',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.person_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Owner Email
+                TextField(
+                  controller: ownerEmailController,
+                  decoration: InputDecoration(
+                    labelText: 'Owner Email',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.email_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Owner Phone
+                TextField(
+                  controller: ownerPhoneController,
+                  decoration: InputDecoration(
+                    labelText: 'Owner Phone',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.phone_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Address
+                TextField(
+                  controller: addressController,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                    labelText: 'Address',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.home_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Active Status
+                Row(
+                  children: [
+                    Icon(Icons.toggle_on_rounded, color: isActive ? Colors.green : Colors.grey),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Store Active',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    ),
+                    const Spacer(),
+                    Switch(
+                      value: isActive,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          isActive = value;
+                        });
+                      },
+                      activeColor: const Color(0xFFB5C7F7),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: GoogleFonts.poppins()),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+                  
+                  final updateData = {
+                    'name': nameController.text.trim(),
+                    'description': descriptionController.text.trim(),
+                    'category': selectedCategory,
+                    'location': locationController.text.trim(),
+                    'ownerName': ownerNameController.text.trim(),
+                    'ownerEmail': ownerEmailController.text.trim(),
+                    'ownerPhone': ownerPhoneController.text.trim(),
+                    'address': addressController.text.trim(),
+                    'isActive': isActive,
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  };
+                  
+                  final result = await storeProvider.updateStore(store['id'], updateData);
+                  
+                  Navigator.pop(context);
+                  
+                  if (result['success']) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result['message'] ?? 'Store "${store['name']}" updated successfully!', style: GoogleFonts.poppins()),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                    // Refresh the analytics data
+                    setState(() {
+                      _updateStoreAnalytics();
+                    });
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result['message'] ?? 'Failed to update store!', style: GoogleFonts.poppins()),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating store: ${e.toString()}', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB5C7F7),
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Update Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteStoreDialogAnalytics(Map<String, dynamic> store) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Text('Delete Store', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to permanently delete this store?',
+              style: GoogleFonts.poppins(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Store: ${store['name']}',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  Text(
+                    'Category: ${store['category']}',
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  Text(
+                    'Revenue: ₹${store['revenue'].toStringAsFixed(0)}',
+                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '⚠️ This action cannot be undone. All store data will be permanently removed from the database.',
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.red[700]),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+                final result = await storeProvider.deleteStore(store['id']);
+                
+                Navigator.pop(context);
+                
+                if (result['success']) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['message'] ?? 'Store "${store['name']}" deleted successfully!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.green,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                  // Refresh the analytics data
+                  setState(() {
+                    _updateStoreAnalytics();
+                  });
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result['message'] ?? 'Failed to delete store!', style: GoogleFonts.poppins()),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting store: ${e.toString()}', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete Permanently', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleStoreStatus(Map<String, dynamic> store) async {
+    try {
+      final storeProvider = Provider.of<StoreProvider>(context, listen: false);
+      final result = await storeProvider.toggleStoreStatus(store['id']);
+      
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Store "${store['name']}" status updated!', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to update store status!', style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating store status: ${e.toString()}', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showManageStoresDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.manage_accounts_rounded, color: const Color(0xFFD6EAF8), size: 28),
+            const SizedBox(width: 12),
+            Text('Manage Stores', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 20)),
+          ],
+        ),
+        content: Consumer<StoreProvider>(
+          builder: (context, storeProvider, child) {
+            if (storeProvider.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            if (storeProvider.allStores.isEmpty) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.store_outlined, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No stores found',
+                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Add your first store to get started',
+                    style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              );
+            }
+            
+            return SizedBox(
+              width: double.maxFinite,
+              height: 400,
+              child: Column(
+                children: [
+                  // Search bar
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search stores...',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                    onChanged: (query) {
+                      storeProvider.searchStores(query);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Store list
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: storeProvider.filteredStores.length,
+                      itemBuilder: (context, index) {
+                        final store = storeProvider.filteredStores[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFFD6EAF8),
+                              child: Icon(
+                                Icons.store_rounded,
+                                color: const Color(0xFF22223B),
+                              ),
+                            ),
+                            title: Text(
+                              store['name'] ?? 'Unknown Store',
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  store['category'] ?? 'No Category',
+                                  style: GoogleFonts.poppins(fontSize: 12),
+                                ),
+                                Text(
+                                  'Status: ${store['isActive'] == true ? 'Active' : 'Inactive'}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: store['isActive'] == true ? Colors.green : Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            trailing: PopupMenuButton<String>(
+                              onSelected: (value) {
+                                switch (value) {
+                                  case 'edit':
+                                    // TODO: Implement edit store functionality
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Edit functionality coming soon!', style: GoogleFonts.poppins()),
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    );
+                                    break;
+                                  case 'toggle':
+                                    _toggleStoreStatus(store);
+                                    break;
+                                  case 'delete':
+                                    _showDeleteStoreDialog(context, store);
+                                    break;
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_rounded, size: 16),
+                                      const SizedBox(width: 8),
+                                      Text('Edit', style: GoogleFonts.poppins()),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'toggle',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        store['isActive'] == true ? Icons.block_rounded : Icons.check_circle_rounded,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        store['isActive'] == true ? 'Deactivate' : 'Activate',
+                                        style: GoogleFonts.poppins(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_rounded, size: 16, color: Colors.red),
+                                      const SizedBox(width: 8),
+                                      Text('Delete', style: GoogleFonts.poppins(color: Colors.red)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: GoogleFonts.poppins()),
+          ),
+        ],
       ),
     );
   }
@@ -6538,6 +7264,75 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 }
 
 // Product Management Helper Methods
+
+// Helper method to parse color string to Color object
+Color _parseColor(String? colorString) {
+  if (colorString == null || colorString.isEmpty) {
+    return const Color(0xFFB5C7F7); // Default color
+  }
+  
+  try {
+    // Remove # if present
+    String hex = colorString.startsWith('#') ? colorString.substring(1) : colorString;
+    
+    // Handle different hex formats
+    if (hex.length == 6) {
+      return Color(int.parse('FF$hex', radix: 16));
+    } else if (hex.length == 8) {
+      return Color(int.parse(hex, radix: 16));
+    } else {
+      return const Color(0xFFB5C7F7); // Default color
+    }
+  } catch (e) {
+    print('Error parsing color: $colorString - $e');
+    return const Color(0xFFB5C7F7); // Default color
+  }
+}
+
+  // Helper method to get icon from string
+  IconData _getIconFromString(String? iconString) {
+    if (iconString == null || iconString.isEmpty) {
+      return Icons.shopping_bag_rounded; // Default icon
+    }
+    
+    // Map of string to IconData
+    final iconMap = {
+      'checkroom_rounded': Icons.checkroom_rounded,
+      'water_drop_rounded': Icons.water_drop_rounded,
+      'solar_power_rounded': Icons.solar_power_rounded,
+      'shopping_bag_rounded': Icons.shopping_bag_rounded,
+      'brush_rounded': Icons.brush_rounded,
+      'spa_rounded': Icons.spa_rounded,
+      'book_rounded': Icons.book_rounded,
+      'face_rounded': Icons.face_rounded,
+      'fitness_center_rounded': Icons.fitness_center_rounded,
+      'local_florist_rounded': Icons.local_florist_rounded,
+      'local_cafe_rounded': Icons.local_cafe_rounded,
+    };
+    
+    return iconMap[iconString] ?? Icons.shopping_bag_rounded;
+  }
+
+  // Helper method to convert IconData to string
+  String _getIconString(IconData icon) {
+    // Map of IconData to string
+    final iconMap = {
+      Icons.checkroom_rounded: 'checkroom_rounded',
+      Icons.water_drop_rounded: 'water_drop_rounded',
+      Icons.solar_power_rounded: 'solar_power_rounded',
+      Icons.shopping_bag_rounded: 'shopping_bag_rounded',
+      Icons.brush_rounded: 'brush_rounded',
+      Icons.spa_rounded: 'spa_rounded',
+      Icons.book_rounded: 'book_rounded',
+      Icons.face_rounded: 'face_rounded',
+      Icons.fitness_center_rounded: 'fitness_center_rounded',
+      Icons.local_florist_rounded: 'local_florist_rounded',
+      Icons.local_cafe_rounded: 'local_cafe_rounded',
+    };
+    
+    return iconMap[icon] ?? 'shopping_bag_rounded';
+  }
+
 Widget _buildAdminProductList(BuildContext context) {
   final allProducts = Provider.of<ProductProvider>(context, listen: true).allProducts;
   
@@ -6601,12 +7396,12 @@ Widget _buildAdminProductList(BuildContext context) {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: product['color'].withOpacity(0.2),
+                    color: _parseColor(product['color']).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    product['icon'],
-                    color: product['color'],
+                    _getIconFromString(product['icon']),
+                    color: _parseColor(product['color']),
                     size: 30,
                   ),
                 ),
@@ -6637,7 +7432,7 @@ Widget _buildAdminProductList(BuildContext context) {
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: product['color'],
+                          color: _parseColor(product['color']),
                         ),
                       ),
                     ],
@@ -7243,11 +8038,15 @@ Widget _buildAddProductForm() {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (nameController.text.isNotEmpty &&
                     priceController.text.isNotEmpty &&
                     quantityController.text.isNotEmpty &&
                     descriptionController.text.isNotEmpty) {
+                  
+                  // Convert Color to hex string and IconData to string
+                  String colorHex = '#${selectedColor.value.toRadixString(16).padLeft(8, '0')}';
+                  String iconString = _getIconString(selectedIcon);
                   
                   final newProduct = {
                     'name': nameController.text,
@@ -7256,24 +8055,67 @@ Widget _buildAddProductForm() {
                     'quantity': int.tryParse(quantityController.text) ?? 0,
                     'material': selectedMaterial,
                     'description': descriptionController.text,
-                    'color': selectedColor,
-                    'icon': selectedIcon,
+                    'color': colorHex,
+                    'icon': iconString,
                     'storeId': selectedStore,
                     'storeName': 'Admin Store',
                   };
                   
-                  Provider.of<ProductProvider>(context, listen: false).addProduct(newProduct);
-                  
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Product "${nameController.text}" added successfully!',
-                        style: GoogleFonts.poppins(),
-                      ),
-                      backgroundColor: Colors.green,
-                    ),
+                  // Show loading indicator
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (BuildContext context) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFB5C7F7)),
+                        ),
+                      );
+                    },
                   );
+
+                  try {
+                    final result = await Provider.of<ProductProvider>(context, listen: false).addProduct(newProduct);
+                    
+                    // Hide loading indicator
+                    Navigator.pop(context);
+                    
+                    if (result['success']) {
+                      Navigator.pop(context); // Close the add product dialog
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            result['message'] ?? 'Product "${nameController.text}" added successfully!',
+                            style: GoogleFonts.poppins(),
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            result['message'] ?? 'Failed to add product!',
+                            style: GoogleFonts.poppins(),
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    // Hide loading indicator
+                    Navigator.pop(context);
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Error adding product: ${e.toString()}',
+                          style: GoogleFonts.poppins(),
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -7368,12 +8210,520 @@ Widget _buildProductStat(String label, String value, IconData icon, Color color)
 }
 
 void _showEditProductAdmin(BuildContext context, Map<String, dynamic> product) {
-  // This would be similar to _buildAddProductForm but with pre-filled values
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('Edit product feature coming soon!', style: GoogleFonts.poppins()),
-      backgroundColor: const Color(0xFFB5C7F7),
+  // Controllers with pre-filled values
+  final nameController = TextEditingController(text: product['name'] ?? '');
+  final priceController = TextEditingController(text: (product['price'] ?? 0.0).toString());
+  final quantityController = TextEditingController(text: (product['quantity'] ?? 0).toString());
+  final descriptionController = TextEditingController(text: product['description'] ?? '');
+  
+  // Pre-selected values
+  String selectedCategory = product['category'] ?? 'Clothing';
+  String selectedMaterial = product['material'] ?? 'Organic Cotton';
+  Color selectedColor = _parseColor(product['color']);
+  IconData selectedIcon = _getIconFromString(product['icon']);
+  String selectedStore = product['storeId'] ?? '1';
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (context) => Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F6F2),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(32),
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 16),
+            width: 50,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2.5),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Text(
+                  'Edit Product',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                  color: Colors.grey[600],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: _buildEditProductForm(
+                context,
+                nameController,
+                priceController,
+                quantityController,
+                descriptionController,
+                selectedCategory,
+                selectedMaterial,
+                selectedColor,
+                selectedIcon,
+                selectedStore,
+                product,
+              ),
+            ),
+          ),
+        ],
+      ),
     ),
+  );
+}
+
+Widget _buildEditProductForm(
+  BuildContext context,
+  TextEditingController nameController,
+  TextEditingController priceController,
+  TextEditingController quantityController,
+  TextEditingController descriptionController,
+  String selectedCategory,
+  String selectedMaterial,
+  Color selectedColor,
+  IconData selectedIcon,
+  String selectedStore,
+  Map<String, dynamic> product,
+) {
+  return StatefulBuilder(
+    builder: (context, setState) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Product Name
+          Text(
+            'Product Name:',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: nameController,
+            decoration: InputDecoration(
+              hintText: 'Enter product name',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Category Selection
+          Text(
+            'Category:',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: selectedCategory,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            items: ['Clothing', 'Accessories', 'Electronics', 'Personal Care', 'Home & Garden', 'Food & Beverages']
+                .map((category) => DropdownMenuItem(
+                      value: category,
+                      child: Text(category, style: GoogleFonts.poppins()),
+                    ))
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                selectedCategory = value!;
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Price and Quantity Row
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Price (₹):',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: priceController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: '0.00',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quantity:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF22223B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: '0',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Material Selection
+          Text(
+            'Material:',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: selectedMaterial,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            items: [
+              'Organic Cotton',
+              'Recycled Polyester',
+              'Bamboo',
+              'Recycled Plastic',
+              'Organic Oils',
+              'Recycled Paper',
+              'Hemp',
+              'Cork',
+              'Jute',
+              'Ceramic',
+            ].map((material) => DropdownMenuItem(
+                  value: material,
+                  child: Text(material, style: GoogleFonts.poppins()),
+                )).toList(),
+            onChanged: (value) {
+              setState(() {
+                selectedMaterial = value!;
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Description
+          Text(
+            'Description:',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: descriptionController,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Enter product description',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Store Selection
+          Text(
+            'Store:',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Consumer<StoreProvider>(
+            builder: (context, storeProvider, child) {
+              List<String> storeNames = storeProvider.allStores.map((store) => store['name'] as String).toList();
+              return DropdownButtonFormField<String>(
+                value: selectedStore,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                items: storeNames.map((storeName) => DropdownMenuItem(
+                      value: storeName,
+                      child: Text(storeName, style: GoogleFonts.poppins()),
+                    )).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedStore = value!;
+                  });
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Color Selection
+          Text(
+            'Choose Color:',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            children: Provider.of<ProductProvider>(context, listen: false).availableColors.map((color) {
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedColor = color;
+                  });
+                },
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(25),
+                    border: Border.all(
+                      color: selectedColor == color ? Colors.black : Colors.transparent,
+                      width: 3,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+
+          // Icon Selection
+          Text(
+            'Choose Icon:',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            children: Provider.of<ProductProvider>(context, listen: false).availableIcons.map((icon) {
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selectedIcon = icon;
+                  });
+                },
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: selectedIcon == icon ? selectedColor.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selectedIcon == icon ? selectedColor : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: selectedIcon == icon ? selectedColor : Colors.grey,
+                    size: 24,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 30),
+
+          // Update Product Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty &&
+                    priceController.text.isNotEmpty &&
+                    quantityController.text.isNotEmpty &&
+                    descriptionController.text.isNotEmpty) {
+                  
+                  // Convert Color to hex string and IconData to string
+                  String colorHex = '#${selectedColor.value.toRadixString(16).padLeft(8, '0')}';
+                  String iconString = _getIconString(selectedIcon);
+                  
+                  final updatedProduct = {
+                    'name': nameController.text,
+                    'category': selectedCategory,
+                    'price': double.tryParse(priceController.text) ?? 0.0,
+                    'quantity': int.tryParse(quantityController.text) ?? 0,
+                    'material': selectedMaterial,
+                    'description': descriptionController.text,
+                    'color': colorHex,
+                    'icon': iconString,
+                    'storeId': selectedStore,
+                    'storeName': 'Admin Store',
+                  };
+                  
+                  // Show loading indicator
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (BuildContext context) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFB5C7F7)),
+                        ),
+                      );
+                    },
+                  );
+
+                  try {
+                    final result = await Provider.of<ProductProvider>(context, listen: false).updateProduct(product['id'], updatedProduct);
+                    
+                    // Hide loading indicator
+                    Navigator.pop(context);
+                    
+                    if (result['success']) {
+                      Navigator.pop(context); // Close the edit product dialog
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            result['message'] ?? 'Product "${nameController.text}" updated successfully!',
+                            style: GoogleFonts.poppins(),
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            result['message'] ?? 'Failed to update product!',
+                            style: GoogleFonts.poppins(),
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    // Hide loading indicator
+                    Navigator.pop(context);
+                    
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Error updating product: ${e.toString()}',
+                          style: GoogleFonts.poppins(),
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Please fill all required fields!',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB5C7F7),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Update Product',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 20),
+        ],
+      );
+    },
   );
 }
 
@@ -7386,7 +8736,7 @@ void _showDeleteProductDialogAdmin(BuildContext context, Map<String, dynamic> pr
         style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
       ),
       content: Text(
-        'Are you sure you want to delete "${product['name']}"? This action cannot be undone.',
+        'Are you sure you want to PERMANENTLY delete "${product['name']}"?\n\n⚠️ This action will completely remove the product from the database and cannot be undone!',
         style: GoogleFonts.poppins(),
       ),
       actions: [
@@ -7395,16 +8745,36 @@ void _showDeleteProductDialogAdmin(BuildContext context, Map<String, dynamic> pr
           child: Text('Cancel', style: GoogleFonts.poppins()),
         ),
         ElevatedButton(
-          onPressed: () {
-                         Provider.of<ProductProvider>(context, listen: false).deleteProduct(product['id']);
-             Navigator.pop(context);
-             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Product deleted successfully!', style: GoogleFonts.poppins()),
-                backgroundColor: Colors.red,
-              ),
-            );
+          onPressed: () async {
+            try {
+              final result = await Provider.of<ProductProvider>(context, listen: false).deleteProduct(product['id']);
+              
+              Navigator.pop(context); // Close dialog
+              
+              if (result['success']) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result['message'] ?? 'Product deleted successfully!', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result['message'] ?? 'Failed to delete product!', style: GoogleFonts.poppins()),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            } catch (e) {
+              Navigator.pop(context); // Close dialog
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error deleting product: ${e.toString()}', style: GoogleFonts.poppins()),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           },
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           child: Text('Delete', style: GoogleFonts.poppins(color: Colors.white)),

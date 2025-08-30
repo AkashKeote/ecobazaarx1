@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import '../services/product_service.dart';
 
 class ProductProvider extends ChangeNotifier {
+  final ProductService _productService = ProductService();
+  
   // Centralized product data that both shopkeeper and admin can access
-  static List<Map<String, dynamic>> _allProducts = [
+  List<Map<String, dynamic>> _allProducts = [];
+  bool _isLoading = false;
+  String? _error;
+
+  // Centralized product data that both shopkeeper and admin can access
+  static List<Map<String, dynamic>> _staticProducts = [
     {
       'id': '1',
       'name': 'Men Grey Hoodie',
@@ -270,8 +278,133 @@ class ProductProvider extends ChangeNotifier {
     },
   ];
 
-  // Getter for all products
+  // Getters
   List<Map<String, dynamic>> get allProducts => _allProducts;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  // Initialize products from Firebase
+  Future<void> initializeProducts() async {
+    _setLoading(true);
+    try {
+      // Try to load from Firebase first
+      _allProducts = await _productService.getAllProducts();
+      _error = null;
+      
+      // If no products in Firebase, initialize sample data
+      if (_allProducts.isEmpty) {
+        print('No products found in Firebase, initializing sample data...');
+        await _productService.initializeSampleProducts();
+        _allProducts = await _productService.getAllProducts();
+      }
+    } catch (e) {
+      _error = 'Failed to load products: ${e.toString()}';
+      print('Error initializing products: $e');
+      // Fallback to static data
+      _allProducts = _productService.getStaticProducts();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Load products from Firebase
+  Future<void> loadProducts() async {
+    _setLoading(true);
+    try {
+      _allProducts = await _productService.getAllProducts();
+      _error = null;
+    } catch (e) {
+      _error = 'Failed to load products: ${e.toString()}';
+      print('Error loading products: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Load products by category from Firebase
+  Future<void> loadProductsByCategory(String category) async {
+    _setLoading(true);
+    try {
+      _allProducts = await _productService.getProductsByCategory(category);
+      _error = null;
+    } catch (e) {
+      _error = 'Failed to load products: ${e.toString()}';
+      print('Error loading products by category: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Load products by store from Firebase
+  Future<void> loadProductsByStore(String storeId) async {
+    _setLoading(true);
+    try {
+      _allProducts = await _productService.getProductsByStore(storeId);
+      _error = null;
+    } catch (e) {
+      _error = 'Failed to load products: ${e.toString()}';
+      print('Error loading products by store: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Search products in Firebase
+  Future<void> searchProductsFirebase(String query) async {
+    _setLoading(true);
+    try {
+      _allProducts = await _productService.searchProducts(query);
+      _error = null;
+    } catch (e) {
+      _error = 'Failed to search products: ${e.toString()}';
+      print('Error searching products: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get featured products from Firebase
+  Future<List<Map<String, dynamic>>> getFeaturedProducts({int limit = 6}) async {
+    try {
+      return await _productService.getFeaturedProducts(limit: limit);
+    } catch (e) {
+      print('Error getting featured products: $e');
+      return [];
+    }
+  }
+
+  // Get low stock products from Firebase
+  Future<List<Map<String, dynamic>>> getLowStockProducts({int threshold = 10}) async {
+    try {
+      return await _productService.getLowStockProducts(threshold: threshold);
+    } catch (e) {
+      print('Error getting low stock products: $e');
+      return [];
+    }
+  }
+
+  // Get product statistics from Firebase
+  Future<Map<String, dynamic>> getProductStats() async {
+    try {
+      return await _productService.getProductStats();
+    } catch (e) {
+      print('Error getting product stats: $e');
+      return {
+        'totalProducts': 0,
+        'totalValue': 0.0,
+        'totalQuantity': 0,
+        'totalCarbonSaved': 0.0,
+        'categories': [],
+        'averagePrice': 0.0,
+      };
+    }
+  }
+
+  // Helper method to set loading state
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
 
   // Get products by store
   List<Map<String, dynamic>> getProductsByStore(String storeId) {
@@ -290,47 +423,93 @@ class ProductProvider extends ChangeNotifier {
   int get activeProductsCount => activeProducts.length;
 
   // Add new product
-  void addProduct(Map<String, dynamic> product) {
-    product['id'] = '${_allProducts.length + 1}';
-    product['createdAt'] = DateTime.now();
-    product['updatedAt'] = DateTime.now();
-    product['isActive'] = true;
-    
-    // Generate random carbon footprint based on category
-    product['carbonFootprint'] = _generateCarbonFootprint(product['category']);
-    
-    // Generate random quantity if not provided
-    if (product['quantity'] == null) {
-      product['quantity'] = 50 + Random().nextInt(200);
+  Future<Map<String, dynamic>> addProduct(Map<String, dynamic> product) async {
+    try {
+      // Generate random carbon footprint based on category
+      product['carbonFootprint'] = _generateCarbonFootprint(product['category']);
+      
+      // Generate random quantity if not provided
+      if (product['quantity'] == null) {
+        product['quantity'] = 50 + Random().nextInt(200);
+      }
+      
+      // Add to Firebase
+      final result = await _productService.addProduct(product);
+      
+      if (result['success']) {
+        // Reload products from Firebase
+        await loadProducts();
+        return result;
+      } else {
+        return result;
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to add product: ${e.toString()}',
+      };
     }
-    
-    _allProducts.add(product);
-    notifyListeners(); // Notify listeners that the product list has changed
   }
 
   // Update product
-  void updateProduct(String productId, Map<String, dynamic> updatedData) {
-    final index = _allProducts.indexWhere((product) => product['id'] == productId);
-    if (index != -1) {
-      _allProducts[index].addAll(updatedData);
-      _allProducts[index]['updatedAt'] = DateTime.now();
-      notifyListeners(); // Notify listeners that the product has been updated
+  Future<Map<String, dynamic>> updateProduct(String productId, Map<String, dynamic> updatedData) async {
+    try {
+      final result = await _productService.updateProduct(productId, updatedData);
+      
+      if (result['success']) {
+        // Reload products from Firebase
+        await loadProducts();
+      }
+      
+      return result;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to update product: ${e.toString()}',
+      };
     }
   }
 
   // Delete product
-  void deleteProduct(String productId) {
-    _allProducts.removeWhere((product) => product['id'] == productId);
-    notifyListeners(); // Notify listeners that a product has been deleted
+  Future<Map<String, dynamic>> deleteProduct(String productId) async {
+    try {
+      final result = await _productService.deleteProduct(productId);
+      
+      if (result['success']) {
+        // Reload products from Firebase
+        await loadProducts();
+      }
+      
+      return result;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to delete product: ${e.toString()}',
+      };
+    }
   }
 
   // Toggle product status
-  void toggleProductStatus(String productId) {
-    final index = _allProducts.indexWhere((product) => product['id'] == productId);
-    if (index != -1) {
-      _allProducts[index]['isActive'] = !(_allProducts[index]['isActive'] ?? true);
-      _allProducts[index]['updatedAt'] = DateTime.now();
-      notifyListeners(); // Notify listeners that the product status has changed
+  Future<Map<String, dynamic>> toggleProductStatus(String productId) async {
+    try {
+      // Get current product status
+      final product = _allProducts.firstWhere((p) => p['id'] == productId);
+      final currentStatus = product['isActive'] ?? true;
+      final newStatus = !currentStatus;
+      
+      final result = await _productService.toggleProductStatus(productId, newStatus);
+      
+      if (result['success']) {
+        // Reload products from Firebase
+        await loadProducts();
+      }
+      
+      return result;
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to toggle product status: ${e.toString()}',
+      };
     }
   }
 

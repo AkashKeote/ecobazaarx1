@@ -55,7 +55,7 @@ class FirebaseConfig {
   static const String storageRulesPath = 'storage.rules';
 
   // Environment settings
-  static const bool isProduction = false; // Change to true for production
+  static const bool isProduction = true; // Change to true for production
   static const String environment = 'development'; // Change to 'production' for production
 
   // API endpoints (if needed for custom backend)

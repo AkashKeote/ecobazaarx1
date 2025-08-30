@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../services/payment_service.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 import 'payment_success_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -655,7 +659,7 @@ class _PaymentScreenState extends State<PaymentScreen>
     );
   }
 
-  void _processPayment() {
+  void _processPayment() async {
     // Show loading dialog first
     showDialog(
       context: context,
@@ -684,20 +688,131 @@ class _PaymentScreenState extends State<PaymentScreen>
       ),
     );
 
-    // Simulate payment processing
-    Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pop(context); // Close loading dialog
+    try {
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
-      // Navigate to success screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const PaymentSuccessScreen(
-            orderId: 'ECO12345',
-            amount: '₹2,156',
+      // Get cart items
+      final cartItems = cartProvider.cartItemsList.map((item) => {
+        'productId': item.id,
+        'productName': item.name,
+        'quantity': item.quantity,
+        'price': item.price,
+        'totalPrice': item.price * item.quantity,
+        'color': '#${item.color.value.toRadixString(16).padLeft(8, '0')}',
+        'icon': item.icon.codePoint.toString(),
+        'carbonFootprint': item.carbonFootprint,
+        'ecoPoints': 10, // Default eco points per item
+      }).toList();
+
+      // Calculate amounts
+      final totalAmount = cartProvider.totalAmount;
+      final taxAmount = totalAmount * 0.18; // 18% GST
+      final shippingAmount = totalAmount > 1000 ? 0.0 : 100.0; // Free shipping above ₹1000
+      final discountAmount = totalAmount * 0.10; // 10% discount
+      final finalAmount = totalAmount + taxAmount + shippingAmount - discountAmount;
+
+      // Create shipping and billing address (using user data)
+      final shippingAddress = {
+        'fullName': authProvider.userName ?? 'Customer',
+        'phone': '+91-0000000000', // Default phone number
+        'address': '123 Main Street',
+        'city': 'Mumbai',
+        'state': 'Maharashtra',
+        'pincode': '400001',
+        'landmark': 'Near Station',
+      };
+
+      final billingAddress = {
+        'fullName': authProvider.userName ?? 'Customer',
+        'phone': '+91-0000000000', // Default phone number
+        'address': '123 Main Street',
+        'city': 'Mumbai',
+        'state': 'Maharashtra',
+        'pincode': '400001',
+      };
+
+      // Create order in Firestore
+      final orderResult = await PaymentService.createOrder(
+        userId: authProvider.firebaseUser?.uid ?? 'user123',
+        userEmail: authProvider.userEmail ?? 'customer@example.com',
+        userName: authProvider.userName ?? 'Customer',
+        userPhone: '+91-0000000000', // Default phone number
+        cartItems: cartItems,
+        shippingAddress: shippingAddress,
+        billingAddress: billingAddress,
+        totalAmount: totalAmount,
+        taxAmount: taxAmount,
+        shippingAmount: shippingAmount,
+        discountAmount: discountAmount,
+        finalAmount: finalAmount,
+        paymentMethod: _selectedPaymentMethod,
+        deliveryNotes: 'Please deliver in the evening',
+      );
+
+      if (!orderResult['success']) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(orderResult['message'], style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
           ),
+        );
+        return;
+      }
+
+      final orderId = orderResult['orderId'];
+
+      // Simulate Razorpay payment
+      final paymentResult = await PaymentService.simulateRazorpayPayment(
+        amount: finalAmount,
+        currency: 'INR',
+        orderId: orderId,
+      );
+
+      // Process payment in Firestore
+      final processResult = await PaymentService.processPayment(
+        orderId: orderId,
+        userId: authProvider.firebaseUser?.uid ?? 'user123',
+        paymentMethod: _selectedPaymentMethod,
+        paymentGateway: 'razorpay',
+        amount: finalAmount,
+        gatewayResponse: paymentResult,
+        failureReason: paymentResult['success'] ? null : paymentResult['failureReason'],
+      );
+
+      Navigator.pop(context); // Close loading dialog
+
+      if (processResult['success']) {
+        // Clear cart after successful payment
+        cartProvider.clearCart();
+        
+        // Navigate to success screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PaymentSuccessScreen(
+              orderId: orderId,
+              amount: '₹${finalAmount.toStringAsFixed(0)}',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(processResult['message'], style: GoogleFonts.poppins()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment failed: ${e.toString()}', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.red,
         ),
       );
-    });
+    }
   }
 }

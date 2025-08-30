@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../payment/payment_screen.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/orders_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class ShoppingCartScreen extends StatefulWidget {
   const ShoppingCartScreen({super.key});
@@ -18,49 +20,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Orders data
-  final List<Map<String, dynamic>> _orders = [
-    {
-      'id': 'ORD001',
-      'product': 'Bamboo Water Bottle',
-      'status': 'Delivered',
-      'date': '2024-01-15',
-      'amount': '₹599',
-      'color': const Color(0xFFD6EAF8),
-    },
-    {
-      'id': 'ORD002',
-      'product': 'Organic Cotton T-Shirt',
-      'status': 'In Transit',
-      'date': '2024-01-14',
-      'amount': '₹899',
-      'color': const Color(0xFFB5C7F7),
-    },
-    {
-      'id': 'ORD003',
-      'product': 'Eco-Friendly Soap',
-      'status': 'Processing',
-      'date': '2024-01-13',
-      'amount': '₹199',
-      'color': const Color(0xFFF9E79F),
-    },
-    {
-      'id': 'ORD004',
-      'product': 'Solar Phone Charger',
-      'status': 'Delivered',
-      'date': '2024-01-12',
-      'amount': '₹1299',
-      'color': const Color(0xFFE8D5C4),
-    },
-    {
-      'id': 'ORD005',
-      'product': 'Reusable Shopping Bag',
-      'status': 'In Transit',
-      'date': '2024-01-11',
-      'amount': '₹299',
-      'color': const Color(0xFFB5C7F7),
-    },
-  ];
+  // Orders data will be loaded from Firestore via OrdersProvider
 
   @override
   void initState() {
@@ -87,6 +47,20 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
 
     _fadeController.forward();
     _slideController.forward();
+    
+    // Initialize orders from Firestore
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeOrders();
+    });
+  }
+
+  void _initializeOrders() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final ordersProvider = Provider.of<OrdersProvider>(context, listen: false);
+    
+    if (authProvider.firebaseUser != null) {
+      ordersProvider.initializeOrders(authProvider.firebaseUser!.uid);
+    }
   }
 
   @override
@@ -209,17 +183,33 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
                       ),
                     ),
 
-                    SizedBox(
-                      height: 120,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _orders.length,
-                        itemBuilder: (context, index) {
-                          final order = _orders[index];
-                          return _buildOrderCard(order);
-                        },
-                      ),
+                    Consumer<OrdersProvider>(
+                      builder: (context, ordersProvider, child) {
+                        final orders = ordersProvider.getFormattedUserOrders();
+                        return SizedBox(
+                          height: 120,
+                          child: ordersProvider.isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : orders.isEmpty
+                                  ? Center(
+                                      child: Text(
+                                        'No orders yet',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      itemCount: orders.length,
+                                      itemBuilder: (context, index) {
+                                        final order = orders[index];
+                                        return _buildOrderCard(order);
+                                      },
+                                    ),
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 16),
@@ -699,12 +689,48 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _orders.length,
-                itemBuilder: (context, index) {
-                  final order = _orders[index];
-                  return _buildOrderListTile(order);
+              child: Consumer<OrdersProvider>(
+                builder: (context, ordersProvider, child) {
+                  final orders = ordersProvider.getFormattedUserOrders();
+                  return ordersProvider.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : orders.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.shopping_bag_outlined,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No orders yet',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 18,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Start shopping to see your orders here',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: orders.length,
+                              itemBuilder: (context, index) {
+                                final order = orders[index];
+                                return _buildOrderListTile(order);
+                              },
+                            );
                 },
               ),
             ),
@@ -739,12 +765,12 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: order['color'].withOpacity(0.2),
+                  color: _parseColor(order['color']).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Icon(
                   Icons.shopping_bag_rounded,
-                  color: order['color'],
+                  color: _parseColor(order['color']),
                   size: 20,
                 ),
               ),
@@ -785,7 +811,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: order['color'],
+                  color: _parseColor(order['color']),
                 ),
               ),
               Container(
@@ -831,12 +857,12 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: order['color'].withOpacity(0.2),
+              color: _parseColor(order['color']).withOpacity(0.2),
               borderRadius: BorderRadius.circular(25),
             ),
             child: Icon(
               Icons.shopping_bag_rounded,
-              color: order['color'],
+              color: _parseColor(order['color']),
               size: 24,
             ),
           ),
@@ -871,7 +897,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: order['color'],
+                  color: _parseColor(order['color']),
                 ),
               ),
               Container(
@@ -907,5 +933,45 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen>
       default:
         return Colors.grey;
     }
+  }
+
+  // Helper method to parse color string to Color object
+  Color _parseColor(dynamic colorValue) {
+    if (colorValue == null) {
+      return const Color(0xFFB5C7F7);
+    }
+    
+    if (colorValue is Color) {
+      return colorValue;
+    }
+    
+    if (colorValue is String) {
+      try {
+        String hex = colorValue.startsWith('#') ? colorValue.substring(1) : colorValue;
+        
+        if (hex.length == 6) {
+          return Color(int.parse('FF$hex', radix: 16));
+        } else if (hex.length == 8) {
+          return Color(int.parse(hex, radix: 16));
+        } else {
+          return const Color(0xFFB5C7F7);
+        }
+      } catch (e) {
+        return const Color(0xFFB5C7F7);
+      }
+    }
+    
+    return const Color(0xFFB5C7F7);
+  }
+
+  // Helper method to safely parse numeric values
+  double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
   }
 }

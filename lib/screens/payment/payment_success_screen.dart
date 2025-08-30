@@ -66,6 +66,9 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 700;
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF7F6F2),
       body: SafeArea(
@@ -73,10 +76,10 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
           opacity: _fadeAnimation,
           child: Column(
             children: [
-              // Header
+              // Header - More compact for small screens
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 32.0,
+                padding: EdgeInsets.symmetric(
+                  vertical: isSmallScreen ? 16.0 : 24.0,
                   horizontal: 24.0,
                 ),
                 child: Row(
@@ -106,7 +109,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                     Text(
                       'Payment Complete',
                       style: GoogleFonts.poppins(
-                        fontSize: 24,
+                        fontSize: isSmallScreen ? 20 : 24,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF22223B),
                       ),
@@ -115,67 +118,69 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                 ),
               ),
 
+              // Scrollable Content
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Success Icon
-                    ScaleTransition(
-                      scale: _bounceAnimation,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFB5C7F7).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(60),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFB5C7F7).withOpacity(0.3),
-                              blurRadius: 30,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Column(
+                    children: [
+                      SizedBox(height: isSmallScreen ? 10 : 20),
+
+                      // Success Icon - Smaller for small screens
+                      ScaleTransition(
+                        scale: _bounceAnimation,
+                        child: Container(
+                          width: isSmallScreen ? 80 : 120,
+                          height: isSmallScreen ? 80 : 120,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFB5C7F7).withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(isSmallScreen ? 40 : 60),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFB5C7F7).withOpacity(0.3),
+                                blurRadius: 30,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.check_circle_rounded,
+                            color: const Color(0xFFB5C7F7),
+                            size: isSmallScreen ? 40 : 64,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.check_circle_rounded,
-                          color: Color(0xFFB5C7F7),
-                          size: 64,
+                      ),
+
+                      SizedBox(height: isSmallScreen ? 20 : 32),
+
+                      // Success Message - Smaller font for small screens
+                      Text(
+                        'Payment Successful!',
+                        style: GoogleFonts.poppins(
+                          fontSize: isSmallScreen ? 22 : 28,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF22223B),
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 32),
+                      SizedBox(height: isSmallScreen ? 12 : 16),
 
-                    // Success Message
-                    Text(
-                      'Payment Successful!',
-                      style: GoogleFonts.poppins(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF22223B),
+                      Text(
+                        'Your order has been placed successfully.\nThank you for choosing EcoBazaarX!',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          color: Colors.grey[600],
+                          height: 1.5,
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 16),
+                      SizedBox(height: isSmallScreen ? 20 : 32),
 
-                    Text(
-                      'Your order has been placed successfully.\nThank you for choosing EcoBazaarX!',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                        height: 1.5,
-                      ),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Order Details Card
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Container(
+                      // Order Details Card - More compact padding
+                      Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(24),
+                        padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
@@ -196,6 +201,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                                   'Order ID',
                                   style: GoogleFonts.poppins(
                                     color: Colors.grey[600],
+                                    fontSize: isSmallScreen ? 13 : 14,
                                   ),
                                 ),
                                 Text(
@@ -203,11 +209,12 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                                   style: GoogleFonts.poppins(
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF22223B),
+                                    fontSize: isSmallScreen ? 13 : 14,
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: isSmallScreen ? 12 : 16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -215,19 +222,20 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                                   'Amount Paid',
                                   style: GoogleFonts.poppins(
                                     color: Colors.grey[600],
+                                    fontSize: isSmallScreen ? 13 : 14,
                                   ),
                                 ),
                                 Text(
                                   widget.amount,
                                   style: GoogleFonts.poppins(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 18,
+                                    fontSize: isSmallScreen ? 16 : 18,
                                     color: const Color(0xFFB5C7F7),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: isSmallScreen ? 12 : 16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -235,6 +243,7 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                                   'Status',
                                   style: GoogleFonts.poppins(
                                     color: Colors.grey[600],
+                                    fontSize: isSmallScreen ? 13 : 14,
                                   ),
                                 ),
                                 Container(
@@ -260,19 +269,16 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                           ],
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 40),
+                      SizedBox(height: isSmallScreen ? 16 : 24),
 
-                    // Environmental Impact
-                    Consumer<CartProvider>(
-                      builder: (context, cartProvider, child) {
-                        final carbonSaved = cartProvider.totalCarbonFootprintSaved;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                          child: Container(
+                      // Environmental Impact - More compact
+                      Consumer<CartProvider>(
+                        builder: (context, cartProvider, child) {
+                          final carbonSaved = cartProvider.totalCarbonFootprintSaved;
+                          return Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(20),
+                            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                             decoration: BoxDecoration(
                               color: const Color(0xFFE8D5C4).withOpacity(0.3),
                               borderRadius: BorderRadius.circular(24),
@@ -286,9 +292,9 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                                 Icon(
                                   Icons.eco_rounded,
                                   color: const Color(0xFF22223B),
-                                  size: 32,
+                                  size: isSmallScreen ? 24 : 32,
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: isSmallScreen ? 12 : 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,12 +304,13 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                                         style: GoogleFonts.poppins(
                                           fontWeight: FontWeight.bold,
                                           color: const Color(0xFF22223B),
+                                          fontSize: isSmallScreen ? 13 : 14,
                                         ),
                                       ),
                                       Text(
                                         'Your eco-friendly purchase saved ${carbonSaved.toStringAsFixed(1)}kg CO₂',
                                         style: GoogleFonts.poppins(
-                                          fontSize: 12,
+                                          fontSize: isSmallScreen ? 11 : 12,
                                           color: Colors.grey[600],
                                         ),
                                       ),
@@ -312,84 +319,85 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen>
                                 ),
                               ],
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              // Action Buttons
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: () => _trackOrder(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFB5C7F7),
-                          foregroundColor: const Color(0xFF22223B),
-                          elevation: 0,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.track_changes_rounded,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Track Order',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.pushNamedAndRemoveUntil(
-                            context,
-                            '/home',
-                            (route) => false,
                           );
                         },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF22223B),
-                          side: const BorderSide(
-                            color: Color(0xFFB5C7F7),
-                            width: 2,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                        child: Text(
-                          'Continue Shopping',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                       ),
-                    ),
-                  ],
+
+                      SizedBox(height: isSmallScreen ? 16 : 24),
+
+                      // Action Buttons - More compact
+                      Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: isSmallScreen ? 48 : 56,
+                            child: ElevatedButton(
+                              onPressed: () => _trackOrder(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFB5C7F7),
+                                foregroundColor: const Color(0xFF22223B),
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.track_changes_rounded,
+                                    size: isSmallScreen ? 18 : 20,
+                                  ),
+                                  SizedBox(width: isSmallScreen ? 8 : 12),
+                                  Text(
+                                    'Track Order',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: isSmallScreen ? 14 : 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 12 : 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: isSmallScreen ? 48 : 56,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  '/home',
+                                  (route) => false,
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF22223B),
+                                side: const BorderSide(
+                                  color: Color(0xFFB5C7F7),
+                                  width: 2,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                              child: Text(
+                                'Continue Shopping',
+                                style: GoogleFonts.poppins(
+                                  fontSize: isSmallScreen ? 14 : 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: isSmallScreen ? 16 : 24),
+                    ],
+                  ),
                 ),
               ),
             ],

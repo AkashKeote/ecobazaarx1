@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/firebase_service.dart' show UserRole;
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -86,7 +85,7 @@ class _SignupScreenState extends State<SignupScreen>
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.signup(
+      final result = await authProvider.signup(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
@@ -94,12 +93,18 @@ class _SignupScreenState extends State<SignupScreen>
         _selectedRole,
       );
 
-      if (success && mounted) {
+      if (result['success'] && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.green,
+          ),
+        );
         _navigateToRoleSpecificDashboard(context, _selectedRole);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Signup failed. Please try again.'),
+          SnackBar(
+            content: Text(result['message']),
             backgroundColor: Colors.red,
           ),
         );
@@ -134,6 +139,141 @@ class _SignupScreenState extends State<SignupScreen>
         Navigator.pushReplacementNamed(context, '/admin');
         break;
     }
+  }
+
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Text(
+                'Reset Password',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF22223B),
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Enter your email address to receive a password reset link.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: const Color(0xFF22223B).withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        hintText: 'Enter your email',
+                        hintStyle: GoogleFonts.poppins(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading ? null : () async {
+                    if (emailController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please enter your email address'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    setState(() {
+                      isLoading = true;
+                    });
+
+                    try {
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final result = await authProvider.resetPassword(emailController.text.trim());
+
+                      Navigator.of(context).pop();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(result['message']),
+                          backgroundColor: result['success'] ? Colors.green : Colors.red,
+                        ),
+                      );
+                    } catch (e) {
+                      setState(() {
+                        isLoading = false;
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF9E79F),
+                    foregroundColor: const Color(0xFF22223B),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF22223B)),
+                          ),
+                        )
+                      : Text(
+                          'Send Reset Link',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -444,8 +584,17 @@ class _SignupScreenState extends State<SignupScreen>
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter a password';
                                 }
-                                if (value.length < 6) {
-                                  return 'Password must be at least 6 characters';
+                                if (value.length < 8) {
+                                  return 'Password must be at least 8 characters';
+                                }
+                                if (!value.contains(RegExp(r'[A-Z]'))) {
+                                  return 'Password must contain at least one uppercase letter';
+                                }
+                                if (!value.contains(RegExp(r'[a-z]'))) {
+                                  return 'Password must contain at least one lowercase letter';
+                                }
+                                if (!value.contains(RegExp(r'[0-9]'))) {
+                                  return 'Password must contain at least one number';
                                 }
                                 return null;
                               },
@@ -559,6 +708,39 @@ class _SignupScreenState extends State<SignupScreen>
                             ),
                           ),
                         ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Forgot Password Link
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            _showForgotPasswordDialog();
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.lock_reset_rounded,
+                                size: 16,
+                                color: const Color(0xFFF9E79F),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Forgot Password?',
+                                style: GoogleFonts.poppins(
+                                  color: const Color(0xFFF9E79F),
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
 

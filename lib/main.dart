@@ -16,7 +16,7 @@ import 'providers/wishlist_provider.dart';
 import 'providers/product_view_provider.dart';
 import 'providers/eco_challenges_provider.dart';
 import 'providers/settings_provider.dart';
-import 'services/firebase_service.dart';
+import 'providers/orders_provider.dart';
 import 'config/firebase_config.dart';
 
 void main() async {
@@ -34,9 +34,6 @@ void main() async {
       measurementId: 'G-0TYKMV0NS9',
     ),
   );
-
-  // Initialize Firebase services
-  await FirebaseService().initialize();
   
   runApp(const EcoBazaarXApp());
 }
@@ -57,10 +54,26 @@ class EcoBazaarXApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProductViewProvider()),
         ChangeNotifierProvider(create: (_) => EcoChallengesProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => OrdersProvider()),
       ],
-      child: Consumer<SettingsProvider>(
-        builder: (context, settingsProvider, child) {
+      child: Consumer4<SettingsProvider, ProductProvider, StoreProvider, WishlistProvider>(
+        builder: (context, settingsProvider, productProvider, storeProvider, wishlistProvider, child) {
           final isDarkMode = settingsProvider.darkModeEnabled;
+          
+          // Initialize products, stores, and wishlist when app starts
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (productProvider.allProducts.isEmpty && !productProvider.isLoading) {
+              productProvider.initializeProducts();
+            }
+            if (storeProvider.allStores.isEmpty && !storeProvider.isLoading) {
+              storeProvider.initializeStores();
+            }
+            // Initialize wishlist for current user (if logged in)
+            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+            if (authProvider.firebaseUser != null && wishlistProvider.wishlistItems.isEmpty && !wishlistProvider.isLoading) {
+              wishlistProvider.initializeWishlist(authProvider.firebaseUser!.uid);
+            }
+          });
           
           return MaterialApp(
             title: 'EcoBazaarX',

@@ -5,15 +5,20 @@ import 'dart:async';
 import 'dart:math';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../providers/wishlist_provider.dart';
+
 import '../../providers/carbon_tracking_provider.dart';
+import '../../providers/wishlist_provider.dart';
 import '../../providers/product_view_provider.dart';
 import '../../providers/eco_challenges_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/orders_provider.dart';
 import '../shopping/shopping_cart_screen.dart';
 import '../shopping/product_catalog_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../shopkeeper/shopkeeper_dashboard_screen.dart';
+import '../shopping/product_detail_screen.dart';
+import '../shopping/wishlist_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,6 +28,64 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  // Helper method to parse color string to Color object
+  Color _parseColor(String? colorString) {
+    if (colorString == null || colorString.isEmpty) {
+      return const Color(0xFFB5C7F7); // Default color
+    }
+    
+    try {
+      // Remove # if present
+      String hex = colorString.startsWith('#') ? colorString.substring(1) : colorString;
+      
+      // Handle different hex formats
+      if (hex.length == 6) {
+        return Color(int.parse('FF$hex', radix: 16));
+      } else if (hex.length == 8) {
+        return Color(int.parse(hex, radix: 16));
+      } else {
+        return const Color(0xFFB5C7F7); // Default color
+      }
+    } catch (e) {
+      print('Error parsing color: $colorString - $e');
+      return const Color(0xFFB5C7F7); // Default color
+    }
+  }
+
+  // Helper method to get icon from string
+  IconData _getIconFromString(String? iconString) {
+    if (iconString == null || iconString.isEmpty) {
+      return Icons.shopping_bag_rounded; // Default icon
+    }
+    
+    // Map of string to IconData
+    final iconMap = {
+      'checkroom_rounded': Icons.checkroom_rounded,
+      'water_drop_rounded': Icons.water_drop_rounded,
+      'solar_power_rounded': Icons.solar_power_rounded,
+      'shopping_bag_rounded': Icons.shopping_bag_rounded,
+      'brush_rounded': Icons.brush_rounded,
+      'spa_rounded': Icons.spa_rounded,
+      'book_rounded': Icons.book_rounded,
+      'face_rounded': Icons.face_rounded,
+      'fitness_center_rounded': Icons.fitness_center_rounded,
+      'local_florist_rounded': Icons.local_florist_rounded,
+      'local_cafe_rounded': Icons.local_cafe_rounded,
+      'eco_rounded': Icons.eco_rounded,
+      'recycling_rounded': Icons.recycling_rounded,
+      'park_rounded': Icons.park_rounded,
+      'forest_rounded': Icons.forest_rounded,
+      'local_drink_rounded': Icons.local_drink_rounded,
+      'directions_bus_rounded': Icons.directions_bus_rounded,
+      'directions_walk_rounded': Icons.directions_walk_rounded,
+      'restaurant_rounded': Icons.restaurant_rounded,
+      'lightbulb_rounded': Icons.lightbulb_rounded,
+      'store_rounded': Icons.store_rounded,
+    };
+    
+    return iconMap[iconString] ?? Icons.shopping_bag_rounded;
+  }
+
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
@@ -49,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _ecoPoints = 1250;
   int _streakDays = 7;
   
-  // Wishlist will be managed by WishlistProvider
+
   
   // Eco challenges will be managed by EcoChallengesProvider
   
@@ -666,6 +729,120 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                   const SizedBox(height: 28),
 
+                  // Wishlist Section
+                  Consumer2<WishlistProvider, AuthProvider>(
+                    builder: (context, wishlistProvider, authProvider, child) {
+                      if (authProvider.firebaseUser == null) {
+                        return const SizedBox.shrink(); // Don't show wishlist if not logged in
+                      }
+
+                      final wishlistItems = wishlistProvider.wishlistItems.take(3).toList(); // Show only first 3 items
+                      
+                      if (wishlistItems.isEmpty) {
+                        return const SizedBox.shrink(); // Don't show section if no items
+                      }
+
+                      return Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'My Wishlist',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF22223B),
+                                  ),
+                                ),
+                                const Spacer(),
+                                TextButton(
+                                  onPressed: () => _showWishlist(),
+                                  child: Text(
+                                    'View All',
+                                    style: GoogleFonts.poppins(
+                                      color: const Color(0xFFB5C7F7),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            height: 200,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: wishlistItems.length,
+                              itemBuilder: (context, index) {
+                                return _buildWishlistCard(wishlistItems[index]);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                        ],
+                      );
+                    },
+                  ),
+
+                  // Recently Viewed Section
+                  Consumer<ProductViewProvider>(
+                    builder: (context, productViewProvider, child) {
+                      final recentlyViewed = productViewProvider.getRecentlyViewed(3);
+                      
+                      if (recentlyViewed.isEmpty) {
+                        return const SizedBox.shrink(); // Don't show section if no items
+                      }
+
+                      return Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Recently Viewed',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF22223B),
+                                  ),
+                                ),
+                                const Spacer(),
+                                TextButton(
+                                  onPressed: () => _showRecentlyViewed(),
+                                  child: Text(
+                                    'View All',
+                                    style: GoogleFonts.poppins(
+                                      color: const Color(0xFFB5C7F7),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            height: 200,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: recentlyViewed.length,
+                              itemBuilder: (context, index) {
+                                return _buildRecentlyViewedCard(recentlyViewed[index]);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                        ],
+                      );
+                    },
+                  ),
+
                   // Eco Points & Streak Section
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -914,55 +1091,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
                   const SizedBox(height: 28),
 
-                  // Wishlist Section
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18.0),
-                    child: Row(
-                      children: [
-                        Text(
-                          'My Wishlist',
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF22223B),
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () => _showWishlist(),
-                          child: Text(
-                            'View All',
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFFB5C7F7),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  Consumer<WishlistProvider>(
-                    builder: (context, wishlistProvider, child) {
-                      return SizedBox(
-                        height: 140,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: wishlistProvider.wishlistItems.length,
-                          itemBuilder: (context, index) {
-                            final item = wishlistProvider.wishlistItems[index];
-                            return _buildWishlistCard(item);
-                          },
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 28),
-
                   // Settings & Preferences Section
               
 
@@ -1123,27 +1251,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           
           // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: [
-                Text(
-                  'Start Shopping 🛍️',
-                  style: GoogleFonts.poppins(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF22223B),
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
-                  color: Colors.grey[600],
-                ),
-              ],
-            ),
-          ),
+    
           
           const SizedBox(height: 20),
           
@@ -1322,30 +1430,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   
-                  const SizedBox(height: 24),
-                  
-                  // Recent Activity
-                  Text(
-                    'Recently Viewed',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF22223B),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  SizedBox(
-                    height: 120,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: 5,
-                      itemBuilder: (context, index) {
-                        return _buildRecentProductCard(index);
-                      },
-                    ),
-                  ),
-                  
                   const SizedBox(height: 40),
                 ],
               ),
@@ -1455,98 +1539,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildRecentProductCard(int index) {
-    List<Map<String, dynamic>> recentProducts = [
-      {
-        'name': 'Bamboo Toothbrush',
-        'price': '₹120',
-        'color': const Color(0xFFE8D5C4),
-        'icon': Icons.brush_rounded,
-      },
-      {
-        'name': 'Organic Honey',
-        'price': '₹350',
-        'color': const Color(0xFFF9E79F),
-        'icon': Icons.water_drop_outlined,
-      },
-      {
-        'name': 'Cotton Tote Bag',
-        'price': '₹299',
-        'color': const Color(0xFFB5C7F7),
-        'icon': Icons.shopping_bag_outlined,
-      },
-      {
-        'name': 'Plant-based Soap',
-        'price': '₹150',
-        'color': const Color(0xFFD6EAF8),
-        'icon': Icons.soap_outlined,
-      },
-      {
-        'name': 'Reusable Bottle',
-        'price': '₹450',
-        'color': const Color(0xFFE8D5C4),
-        'icon': Icons.local_drink_rounded,
-      },
-    ];
 
-    final product = recentProducts[index % recentProducts.length];
-
-    return Container(
-      width: 100,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: product['color'].withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(
-              product['icon'],
-              color: product['color'],
-              size: 20,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            product['name'],
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF22223B),
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            product['price'],
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: product['color'],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // Enhanced shopping navigation methods
   void _navigateToAllProducts() {
@@ -2508,129 +2501,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 20),
                     
                     // View Statistics
-                    Consumer<ProductViewProvider>(
-                      builder: (context, productViewProvider, child) {
-                        return Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFFB5C7F7).withOpacity(0.8),
-                                const Color(0xFFD6EAF8).withOpacity(0.6),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFB5C7F7).withOpacity(0.3)),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.visibility_rounded,
-                                size: 48,
-                                color: const Color(0xFF22223B),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'View Statistics',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF22223B),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${productViewProvider.productsViewedTodayCount} products viewed today',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFF22223B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Recently Viewed Products
-                    Text(
-                      'Recently Viewed',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF22223B),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFB5C7F7).withOpacity(0.8),
+                            const Color(0xFFD6EAF8).withOpacity(0.6),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFB5C7F7).withOpacity(0.3)),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Real viewed products from ProductViewProvider
-                    Consumer<ProductViewProvider>(
-                      builder: (context, productViewProvider, child) {
-                        final viewedProducts = productViewProvider.getRecentlyViewed(4);
-                        
-                        if (viewedProducts.isEmpty) {
-                          return Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.visibility_rounded,
+                            size: 48,
+                            color: const Color(0xFF22223B),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'View Statistics',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF22223B),
                             ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.visibility_off_rounded,
-                                  size: 48,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No Products Viewed Yet',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Start browsing products to see them here!',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '0 products viewed today',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF22223B),
                             ),
-                          );
-                        }
-                        
-                        return Column(
-                          children: viewedProducts.map((productView) => 
-                            _buildViewedProductCard(
-                              productView.name,
-                              '₹${productView.price.toStringAsFixed(0)}',
-                              productView.description,
-                              productView.rating,
-                              productView.icon,
-                              productView.color,
-                            )
-                          ).toList(),
-                        );
-                      },
+                          ),
+                        ],
+                      ),
                     ),
                     
                     const SizedBox(height: 24),
@@ -2646,105 +2558,46 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 16),
                     
-                    Consumer<ProductViewProvider>(
-                      builder: (context, productViewProvider, child) {
-                        final topCategories = productViewProvider.topViewedCategories;
-                        
-                        if (topCategories.isEmpty) {
-                          return Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.category_outlined,
+                            size: 48,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No Category Data Yet',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[600],
                             ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.category_outlined,
-                                  size: 48,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No Category Data Yet',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Browse products to see category analytics',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Browse products to see category analytics',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey[500],
                             ),
-                          );
-                        }
-                        
-                        return Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildCategoryViewCard(
-                                    topCategories.isNotEmpty ? topCategories[0].key : 'No Data',
-                                    topCategories.isNotEmpty ? topCategories[0].value : 0,
-                                    _getCategoryIcon(topCategories.isNotEmpty ? topCategories[0].key : ''),
-                                    _getCategoryColor(topCategories.isNotEmpty ? topCategories[0].key : ''),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildCategoryViewCard(
-                                    topCategories.length > 1 ? topCategories[1].key : 'No Data',
-                                    topCategories.length > 1 ? topCategories[1].value : 0,
-                                    _getCategoryIcon(topCategories.length > 1 ? topCategories[1].key : ''),
-                                    _getCategoryColor(topCategories.length > 1 ? topCategories[1].key : ''),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            
-                            if (topCategories.length > 2) ...[
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildCategoryViewCard(
-                                      topCategories[2].key,
-                                      topCategories[2].value,
-                                      _getCategoryIcon(topCategories[2].key),
-                                      _getCategoryColor(topCategories[2].key),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildCategoryViewCard(
-                                      topCategories.length > 3 ? topCategories[3].key : 'No Data',
-                                      topCategories.length > 3 ? topCategories[3].value : 0,
-                                      _getCategoryIcon(topCategories.length > 3 ? topCategories[3].key : ''),
-                                      _getCategoryColor(topCategories.length > 3 ? topCategories[3].key : ''),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        );
-                      },
+                          ),
+                        ],
+                      ),
                     ),
                     
                     const SizedBox(height: 24),
@@ -2778,90 +2631,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildViewedProductCard(String name, String price, String description, double rating, IconData icon, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 30,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF22223B),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      rating.toStringAsFixed(1),
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      price,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildCategoryViewCard(String category, int viewCount, IconData icon, Color color) {
     return Container(
@@ -4917,259 +4687,62 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // Product interaction method
   void _onProductTap(Map<String, dynamic> product) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Consumer<CartProvider>(
-        builder: (context, cartProvider, child) => Container(
-          height: MediaQuery.of(context).size.height * 0.85,
-          decoration: const BoxDecoration(
-            color: Color(0xFFF7F6F2),
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(32),
-            ),
-          ),
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 16),
-                width: 50,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2.5),
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Product Image Section
-                      Container(
-                        width: double.infinity,
-                        height: 160,
-                        decoration: BoxDecoration(
-                          color: product['color'].withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Icon(
-                          product['icon'],
-                          color: product['color'],
-                          size: 60,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // Product Details
-                      Text(
-                        product['name'],
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF22223B),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      
-                      Row(
-                        children: [
-                          Icon(Icons.star_rounded, color: Colors.amber, size: 20),
-                          const SizedBox(width: 4),
-                          Text(
-                            product['rating'],
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              product['discount'],
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      Text(
-                        product['price'],
-                        style: GoogleFonts.poppins(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: product['color'],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      
-                      Text(
-                        'Eco-friendly product made with sustainable materials. Perfect for environmentally conscious customers.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          height: 1.5,
-                        ),
-                      ),
-                      
-                      // Quantity Selection
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Text(
-                            'Quantity:',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF22223B),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: product['color']),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                IconButton(
-                                  onPressed: () {
-                                    final productId = product['id'] ?? product['name'];
-                                    if (cartProvider.isInCart(productId)) {
-                                      cartProvider.removeSingleItem(productId);
-                                    }
-                                  },
-                                  icon: Icon(Icons.remove, color: product['color']),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text(
-                                    '${cartProvider.getQuantity(product['id'] ?? product['name'])}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF22223B),
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  onPressed: () {
-                                    _addToCart(product, cartProvider);
-                                  },
-                                  icon: Icon(Icons.add, color: product['color']),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Action Buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                _addToCart(product, cartProvider);
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '${product['name']} added to cart!',
-                                      style: GoogleFonts.poppins(),
-                                    ),
-                                    backgroundColor: product['color'],
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.add_shopping_cart_rounded),
-                              label: Text(
-                                'Add to Cart',
-                                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: product['color'],
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _navigateToCart();
-                              },
-                              icon: const Icon(Icons.shopping_cart_rounded),
-                              label: Text(
-                                'View Cart',
-                                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: product['color'],
-                                side: BorderSide(color: product['color'], width: 2),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+    try {
+      // Format product data for ProductDetailScreen
+      final formattedProduct = {
+        'id': product['id'] ?? product['name'],
+        'name': product['name'] ?? 'Unknown Product',
+        'description': product['description'] ?? 'Eco-friendly ${(product['name']?.toString() ?? 'product').toLowerCase()}',
+        'price': _parsePrice(product['price']),
+        'rating': product['rating'] ?? 4.5,
+        'discount': product['discount'] ?? null,
+        'color': product['color'] ?? '#B5C7F7',
+        'icon': product['icon'] ?? 'shopping_bag_rounded',
+        'category': _getProductCategory(product),
+        'carbonFootprint': _getProductCarbonFootprint(product),
+        'waterSaved': product['waterSaved'] ?? 0.0,
+        'energySaved': product['energySaved'] ?? 0.0,
+        'wasteReduced': product['wasteReduced'] ?? 0.0,
+        'treesEquivalent': product['treesEquivalent'] ?? 0.0,
+        'material': product['material'] ?? 'Eco-friendly material',
+        'image': product['image'] ?? null,
+      };
+
+      // Track product view
+      final productViewProvider = Provider.of<ProductViewProvider>(context, listen: false);
+      productViewProvider.addProductView(formattedProduct);
+      
+      // Navigate to product detail screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProductDetailScreen(product: formattedProduct),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      print('Error navigating to product detail: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error showing product details: ${e.toString()}',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  void _addToCart(Map<String, dynamic> product, CartProvider cartProvider) {
-    // Extract price from string (remove ₹ symbol)
-    String priceString = product['price'].toString().replaceAll('₹', '').replaceAll(',', '');
-    double price = double.tryParse(priceString) ?? 0.0;
-    
-    // Determine category based on product name or icon
-    String category = _getProductCategory(product);
-    
-    // Calculate carbon footprint based on product type
-    double carbonFootprint = _getProductCarbonFootprint(product);
-    
-    cartProvider.addItem(
-      productId: product['id'] ?? product['name'],
-      name: product['name'],
-      description: 'Eco-friendly ${product['name'].toLowerCase()}',
-      price: price,
-      icon: product['icon'],
-      color: product['color'],
-      category: category,
-      carbonFootprint: carbonFootprint,
-    );
+  // Helper method to parse price string to double
+  double _parsePrice(dynamic price) {
+    if (price is double) return price;
+    if (price is int) return price.toDouble();
+    if (price is String) {
+      // Remove ₹ symbol and commas, then parse
+      String cleanPrice = price.replaceAll('₹', '').replaceAll(',', '').trim();
+      return double.tryParse(cleanPrice) ?? 0.0;
+    }
+    return 0.0;
   }
 
   // Build trending product cards
@@ -5181,8 +4754,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'price': '₹899',
         'discount': '20% OFF',
         'rating': '4.8',
-        'color': const Color(0xFFB5C7F7),
-        'icon': Icons.checkroom_rounded,
+        'color': '#B5C7F7',
+        'icon': 'checkroom_rounded',
       },
       {
         'id': 'bamboo-water-bottle',
@@ -5190,8 +4763,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'price': '₹599',
         'discount': '15% OFF',
         'rating': '4.9',
-        'color': const Color(0xFFD6EAF8),
-        'icon': Icons.water_drop_rounded,
+        'color': '#D6EAF8',
+        'icon': 'water_drop_rounded',
       },
       {
         'id': 'reusable-shopping-bag',
@@ -5199,8 +4772,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'price': '₹299',
         'discount': 'NEW',
         'rating': '4.7',
-        'color': const Color(0xFFE8D5C4),
-        'icon': Icons.shopping_bag_rounded,
+        'color': '#E8D5C4',
+        'icon': 'shopping_bag_rounded',
       },
       {
         'id': 'eco-friendly-soap',
@@ -5208,8 +4781,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'price': '₹199',
         'discount': '25% OFF',
         'rating': '4.6',
-        'color': const Color(0xFFF9E79F),
-        'icon': Icons.soap_rounded,
+        'color': '#F9E79F',
+        'icon': 'spa_rounded',
       },
       {
         'id': 'solar-phone-charger',
@@ -5217,8 +4790,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         'price': '₹1299',
         'discount': 'HOT',
         'rating': '4.9',
-        'color': const Color(0xFFB5C7F7),
-        'icon': Icons.solar_power_rounded,
+        'color': '#B5C7F7',
+        'icon': 'solar_power_rounded',
       },
     ];
 
@@ -5250,14 +4823,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 width: double.infinity,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: product['color'].withOpacity(0.2),
+                  color: _parseColor(product['color']).withOpacity(0.2),
                 ),
                 child: Stack(
                   children: [
                     Center(
                       child: Icon(
-                        product['icon'],
-                        color: product['color'],
+                        _getIconFromString(product['icon']),
+                        color: _parseColor(product['color']),
                         size: 40,
                       ),
                     ),
@@ -5271,7 +4844,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          product['discount'],
+                          product['discount'] ?? 'NEW',
                           style: GoogleFonts.poppins(
                             color: Colors.white,
                             fontSize: 10,
@@ -5291,7 +4864,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        product['name'],
+                        product['name'] ?? 'Unknown Product',
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -5310,7 +4883,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                           const SizedBox(width: 2),
                           Text(
-                            product['rating'],
+                            product['rating'] ?? '4.5',
                             style: GoogleFonts.poppins(
                               fontSize: 10,
                               color: Colors.grey[600],
@@ -5343,17 +4916,37 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            product['price'],
+                            product['price'] ?? '₹0',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
-                              color: product['color'],
+                              color: _parseColor(product['color']),
                             ),
                           ),
-                          Icon(
-                            Icons.add_shopping_cart_rounded,
-                            color: product['color'],
-                            size: 18,
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                                  cartProvider.addItem(
+                                    productId: product['id'] ?? 'unknown',
+                                    name: product['name'] ?? 'Unknown Product',
+                                    description: product['description'] ?? 'Eco-friendly product',
+                                    price: _parsePrice(product['price']),
+                                    icon: _getIconFromString(product['icon']),
+                                    color: _parseColor(product['color']),
+                                    category: product['category'] ?? 'General',
+                                    carbonFootprint: _parseDouble(product['carbonFootprint']),
+                                  );
+                                  _showSnackBar('Added to cart');
+                                },
+                                child: Icon(
+                                  Icons.add_shopping_cart_rounded,
+                                  color: _parseColor(product['color']),
+                                  size: 18,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -5421,11 +5014,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'delivered':
+      case 'completed':
         return Colors.green;
       case 'in transit':
+      case 'shipped':
         return const Color(0xFFB5C7F7);
       case 'processing':
+      case 'pending':
         return const Color(0xFFF9E79F);
+      case 'cancelled':
+        return Colors.red;
       default:
         return Colors.grey;
     }
@@ -5537,214 +5135,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildWishlistCard(Map<String, dynamic> item) {
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: item['color'].withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(
-                  item['icon'],
-                  color: item['color'],
-                  size: 18,
-                ),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () {
-                  final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
-                  wishlistProvider.removeFromWishlist(item['id']);
-                  _showSnackBar('Removed from wishlist');
-                },
-                child: const Icon(Icons.favorite, color: Colors.red, size: 18),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: Text(
-              item['name'],
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF22223B),
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '₹${(item['price'] as double).toStringAsFixed(2)}',
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: item['color'],
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _addToWishlistCart(item),
-                child: Icon(
-                  Icons.add_shopping_cart_rounded,
-                  color: item['color'],
-                  size: 18,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildFullWishlistCard(Map<String, dynamic> item) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: item['color'].withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              item['icon'],
-              color: item['color'],
-              size: 30,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['name'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF22223B),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item['category'] ?? 'General',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      '₹${(item['price'] as double).toStringAsFixed(2)}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: item['color'],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${item['carbonFootprint']} kg CO₂',
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          color: Colors.green[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Column(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
-                  wishlistProvider.removeFromWishlist(item['id']);
-                  _showSnackBar('Removed from wishlist');
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.favorite, color: Colors.red, size: 20),
-                ),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () => _addToWishlistCart(item),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: item['color'].withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.add_shopping_cart_rounded,
-                    color: item['color'],
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+
+
 
   Widget _buildSettingsCard(String title, String subtitle, IconData icon, Color color, VoidCallback onTap, {Widget? trailing}) {
     return GestureDetector(
@@ -5813,144 +5206,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
 
 
-  void _showWishlist() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF7F6F2),
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(32),
-          ),
-        ),
-        child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 16),
-              width: 50,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2.5),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  Text(
-                    'My Wishlist',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF22223B),
-                    ),
-                  ),
-                  const Spacer(),
-                  Consumer<WishlistProvider>(
-                    builder: (context, wishlistProvider, child) {
-                      return Text(
-                        '${wishlistProvider.wishlistCount} items',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      );
-                    },
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Consumer<WishlistProvider>(
-                builder: (context, wishlistProvider, child) {
-                  return wishlistProvider.wishlistItems.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.favorite_border_rounded,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Your wishlist is empty',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Add items to your wishlist while shopping',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              Navigator.pushNamed(context, '/product-catalog');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFB5C7F7),
-                              foregroundColor: const Color(0xFF22223B),
-                            ),
-                            child: Text(
-                              'Start Shopping',
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: () {
-                              final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
-                              wishlistProvider.addSampleItems();
-                              Navigator.pop(context);
-                              _showWishlist();
-                            },
-                            child: Text(
-                              'Add Sample Items (Test)',
-                              style: GoogleFonts.poppins(
-                                color: const Color(0xFFB5C7F7),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: wishlistProvider.wishlistItems.length,
-                      itemBuilder: (context, index) {
-                        final item = wishlistProvider.wishlistItems[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: _buildFullWishlistCard(item),
-                        );
-                      },
-                    );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   void _showNotificationSettings() {
     showDialog(
@@ -6073,7 +5329,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     _buildProfileMetric('Total Orders', '0'),
                     Consumer<WishlistProvider>(
                       builder: (context, wishlistProvider, child) {
-                        return _buildProfileMetric('Wishlist Items', '${wishlistProvider.wishlistCount}');
+                        return _buildProfileMetric('Wishlist Items', '${wishlistProvider.totalItems}');
                       },
                     ),
                     _buildProfileMetric('Challenges Completed', '2'),
@@ -6204,56 +5460,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _addToWishlistCart(Map<String, dynamic> item) {
-    // Price is already a double from WishlistProvider
-    double price = (item['price'] as double);
-    
-    // Determine category based on product name or icon
-    String category = _getProductCategory(item);
-    
-    // Calculate carbon footprint based on product type
-    double carbonFootprint = _getProductCarbonFootprint(item);
-    
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    cartProvider.addItem(
-      productId: item['name'],
-      name: item['name'],
-      description: 'Eco-friendly ${item['name'].toLowerCase()}',
-      price: price,
-      icon: item['icon'],
-      color: item['color'],
-      category: category,
-      carbonFootprint: carbonFootprint,
-    );
-    
-    final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
-    wishlistProvider.removeFromWishlist(item['id']);
-    
-    _showSnackBar('${item['name']} added to cart!');
-  }
+
 
   // Helper method to determine product category
   String _getProductCategory(Map<String, dynamic> product) {
-    String name = product['name'].toString().toLowerCase();
-    IconData icon = product['icon'];
+    String name = (product['name']?.toString() ?? 'unknown').toLowerCase();
+    String iconString = product['icon']?.toString() ?? 'shopping_bag_rounded';
     
     if (name.contains('cotton') || name.contains('tshirt') || name.contains('clothing') || 
-        icon == Icons.checkroom_rounded) {
+        iconString == 'checkroom_rounded') {
       return 'Clothing';
     } else if (name.contains('bamboo') || name.contains('water') || name.contains('bottle') || 
-               icon == Icons.water_drop_rounded) {
+               iconString == 'water_drop_rounded') {
       return 'Home & Garden';
     } else if (name.contains('bag') || name.contains('shopping') || 
-               icon == Icons.shopping_bag_rounded) {
+               iconString == 'shopping_bag_rounded') {
       return 'Accessories';
     } else if (name.contains('soap') || name.contains('personal') || 
-               icon == Icons.soap_rounded) {
+               iconString == 'spa_rounded') {
       return 'Personal Care';
     } else if (name.contains('solar') || name.contains('charger') || 
-               icon == Icons.solar_power_rounded) {
+               iconString == 'solar_power_rounded') {
       return 'Electronics';
     } else if (name.contains('honey') || name.contains('organic') || 
-               icon == Icons.restaurant_rounded) {
+               iconString == 'restaurant_rounded') {
       return 'Food & Beverages';
     } else {
       return 'Other';
@@ -6262,26 +5492,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // Helper method to calculate carbon footprint
   double _getProductCarbonFootprint(Map<String, dynamic> product) {
-    String name = product['name'].toString().toLowerCase();
-    IconData icon = product['icon'];
+    String name = (product['name']?.toString() ?? 'unknown').toLowerCase();
+    String iconString = product['icon']?.toString() ?? 'shopping_bag_rounded';
     
     if (name.contains('cotton') || name.contains('tshirt') || name.contains('clothing') || 
-        icon == Icons.checkroom_rounded) {
+        iconString == 'checkroom_rounded') {
       return 2.5; // kg CO2 saved per clothing item
     } else if (name.contains('bamboo') || name.contains('water') || name.contains('bottle') || 
-               icon == Icons.water_drop_rounded) {
+               iconString == 'water_drop_rounded') {
       return 1.8; // kg CO2 saved per reusable bottle
     } else if (name.contains('bag') || name.contains('shopping') || 
-               icon == Icons.shopping_bag_rounded) {
+               iconString == 'shopping_bag_rounded') {
       return 1.2; // kg CO2 saved per reusable bag
     } else if (name.contains('soap') || name.contains('personal') || 
-               icon == Icons.soap_rounded) {
+               iconString == 'spa_rounded') {
       return 0.8; // kg CO2 saved per eco soap
     } else if (name.contains('solar') || name.contains('charger') || 
-               icon == Icons.solar_power_rounded) {
+               iconString == 'solar_power_rounded') {
       return 3.5; // kg CO2 saved per solar charger
     } else if (name.contains('honey') || name.contains('organic') || 
-               icon == Icons.restaurant_rounded) {
+               iconString == 'restaurant_rounded') {
       return 1.5; // kg CO2 saved per organic food item
     } else {
       return 1.0; // Default carbon footprint
@@ -6434,11 +5664,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   
                   // Orders List
                   Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: 10,
-                      itemBuilder: (context, index) {
-                        return _buildOrderItem(index);
+                    child: Consumer<OrdersProvider>(
+                      builder: (context, ordersProvider, child) {
+                        final orders = ordersProvider.getFormattedAllOrders();
+                        return ordersProvider.isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : orders.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.shopping_bag_outlined,
+                                          size: 64,
+                                          color: Colors.grey[400],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'No orders yet',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 18,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Orders will appear here when customers place them',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 14,
+                                            color: Colors.grey[500],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    itemCount: orders.length,
+                                    itemBuilder: (context, index) {
+                                      final order = orders[index];
+                                      return _buildOrderItemFromData(order, index);
+                                    },
+                                  );
                       },
                     ),
                   ),
@@ -6486,20 +5753,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildOrderItem(int index) {
-    final orderStatuses = ['Pending', 'Processing', 'Completed'];
-    final statusColors = [
-      const Color(0xFFFFB74D),
-      const Color(0xFF64B5F6),
-      const Color(0xFF81C784),
-    ];
-    
-    final status = orderStatuses[index % 3];
-    final statusColor = statusColors[index % 3];
-    final orderNumber = 'ORD-${(2024000 + index).toString()}';
-    final customerName = ['Priya Sharma', 'Rahul Kumar', 'Anjali Patel', 'Vikram Singh', 'Meera Reddy'][index % 5];
-    final amount = (1200 + (index * 150)).toDouble();
-    final items = (2 + (index % 3)).toString();
+  Widget _buildOrderItemFromData(Map<String, dynamic> order, int index) {
+    final status = order['status'] ?? 'Unknown';
+    final statusColor = _getStatusColor(status);
+    final orderNumber = order['id'] ?? 'Unknown';
+    final customerName = order['orderData']?['userName'] ?? 'Unknown Customer';
+    final amount = double.tryParse(order['amount']?.toString().replaceAll('₹', '') ?? '0') ?? 0.0;
+    final items = (order['orderData']?['items'] as List<dynamic>?)?.length.toString() ?? '0';
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -6691,6 +5951,522 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     } else {
       return '${difference.inDays}d ago';
     }
+  }
+
+  // Helper method to safely parse numeric values
+  double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  // Helper method to safely parse integer values
+  int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    return 0;
+  }
+
+  // Helper method to convert Color to hex string
+  String _colorToString(Color color) {
+    return '#${color.value.toRadixString(16).substring(2)}';
+  }
+
+  // Helper method to convert IconData to string
+  String _iconToString(IconData icon) {
+    // Map common icons to their string representations
+    final iconMap = {
+      Icons.shopping_bag_rounded: 'shopping_bag_rounded',
+      Icons.checkroom_rounded: 'checkroom_rounded',
+      Icons.water_drop_rounded: 'water_drop_rounded',
+      Icons.solar_power_rounded: 'solar_power_rounded',
+      Icons.brush_rounded: 'brush_rounded',
+      Icons.spa_rounded: 'spa_rounded',
+      Icons.book_rounded: 'book_rounded',
+      Icons.face_rounded: 'face_rounded',
+      Icons.fitness_center_rounded: 'fitness_center_rounded',
+      Icons.local_florist_rounded: 'local_florist_rounded',
+      Icons.local_cafe_rounded: 'local_cafe_rounded',
+      Icons.eco_rounded: 'eco_rounded',
+      Icons.recycling_rounded: 'recycling_rounded',
+      Icons.park_rounded: 'park_rounded',
+      Icons.forest_rounded: 'forest_rounded',
+      Icons.local_drink_rounded: 'local_drink_rounded',
+      Icons.directions_bus_rounded: 'directions_bus_rounded',
+      Icons.directions_walk_rounded: 'directions_walk_rounded',
+      Icons.restaurant_rounded: 'restaurant_rounded',
+      Icons.lightbulb_rounded: 'lightbulb_rounded',
+      Icons.store_rounded: 'store_rounded',
+    };
+    
+    return iconMap[icon] ?? 'shopping_bag_rounded';
+  }
+
+  // Show wishlist screen
+  void _showWishlist() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WishlistScreen(),
+      ),
+    );
+  }
+
+  // Show recently viewed screen
+  void _showRecentlyViewed() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7F6F2),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(32),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Text(
+                    'Recently Viewed Products',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22223B),
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Consumer<ProductViewProvider>(
+                builder: (context, productViewProvider, child) {
+                  final recentlyViewed = productViewProvider.viewedProducts;
+                  
+                  if (recentlyViewed.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.visibility_off_rounded,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No Products Viewed Yet',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Start browsing products to see them here!',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: recentlyViewed.length,
+                    itemBuilder: (context, index) {
+                      final product = recentlyViewed[index];
+                      return _buildRecentlyViewedListItem(product);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Build recently viewed card for dashboard
+  Widget _buildRecentlyViewedCard(ProductView product) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: product.color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              product.icon,
+              color: product.color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            (product.name ?? 'Unknown Product'),
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '₹${product.price.toStringAsFixed(0)}',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: product.color,
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () {
+              // Close modal and navigate to product detail
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProductDetailScreen(product: {
+                    'id': product.productId ?? 'unknown',
+                    'name': product.name ?? 'Unknown Product',
+                    'description': product.description ?? 'Eco-friendly product',
+                    'price': product.price ?? 0.0,
+                    'color': _colorToString(product.color),
+                    'icon': _iconToString(product.icon),
+                    'category': product.category ?? 'General',
+                    'carbonFootprint': 1.0,
+                    'waterSaved': 0.0,
+                    'energySaved': 0.0,
+                    'wasteReduced': 0.0,
+                    'treesEquivalent': 0.0,
+                    'material': 'Eco-friendly material',
+                    'rating': product.rating ?? 4.5,
+                  }),
+                ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: product.color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: product.color.withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                'View Details',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: product.color,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build recently viewed list item for modal
+  Widget _buildRecentlyViewedListItem(ProductView product) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: product.color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              product.icon,
+              color: product.color,
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF22223B),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  product.description,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      product.rating.toStringAsFixed(1),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '₹${product.price.toStringAsFixed(0)}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: product.color,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build wishlist card
+  Widget _buildWishlistCard(Map<String, dynamic> item) {
+    return Container(
+      width: 160,
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _parseColor(item['productColor']).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _getIconFromString(item['productIcon']),
+                  color: _parseColor(item['productColor']),
+                  size: 20,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: () async {
+                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                  final wishlistProvider = Provider.of<WishlistProvider>(context, listen: false);
+                  
+                  if (authProvider.firebaseUser != null) {
+                    await wishlistProvider.removeFromWishlist(
+                      userId: authProvider.firebaseUser!.uid,
+                      productId: item['productId'],
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Removed from wishlist', style: GoogleFonts.poppins()),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                child: Icon(
+                  Icons.close_rounded,
+                  color: Colors.grey[400],
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            (item['productName']?.toString() ?? 'Unknown Product'),
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF22223B),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '₹${_parseDouble(item['productPrice']).toStringAsFixed(0)}',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: _parseColor(item['productColor']),
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () {
+              // Ensure all required fields have safe fallback values
+              final productId = item['productId']?.toString() ?? 'unknown';
+              final productName = item['productName']?.toString() ?? 'Unknown Product';
+              final productDescription = item['productDescription']?.toString() ?? 'Eco-friendly product';
+              final productCategory = item['productCategory']?.toString() ?? 'General';
+              
+              // Safely handle color and icon
+              String productColor;
+              if (item['productColor'] is String) {
+                productColor = item['productColor'];
+              } else {
+                productColor = _colorToString(_parseColor(item['productColor']));
+              }
+              
+              String productIcon;
+              if (item['productIcon'] is String) {
+                productIcon = item['productIcon'];
+              } else {
+                productIcon = _iconToString(_getIconFromString(item['productIcon']));
+              }
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProductDetailScreen(product: {
+                    'id': productId,
+                    'name': productName,
+                    'description': productDescription,
+                    'price': _parseDouble(item['productPrice']),
+                    'color': productColor,
+                    'icon': productIcon,
+                    'category': productCategory,
+                    'carbonFootprint': _parseDouble(item['carbonFootprint']),
+                    'waterSaved': _parseDouble(item['waterSaved']),
+                    'energySaved': _parseDouble(item['energySaved']),
+                    'wasteReduced': _parseDouble(item['wasteReduced']),
+                    'treesEquivalent': _parseDouble(item['treesEquivalent']),
+                    'material': item['material']?.toString() ?? 'Eco-friendly material',
+                    'rating': _parseDouble(item['rating']),
+                    'quantity': _parseDouble(item['quantity']),
+                  }),
+                ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: _parseColor(item['productColor']).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: _parseColor(item['productColor']).withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                'View Details',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _parseColor(item['productColor']),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

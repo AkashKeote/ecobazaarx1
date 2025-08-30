@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/firebase_service.dart' show UserRole;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -70,21 +69,27 @@ class _LoginScreenState extends State<LoginScreen>
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.login(
+      final result = await authProvider.login(
         _emailController.text.trim(),
         _passwordController.text,
         _selectedRole,
       );
 
-      if (success) {
+      if (result['success']) {
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message']),
+              backgroundColor: Colors.green,
+            ),
+          );
           _navigateToRoleSpecificDashboard(context, _selectedRole);
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Login failed. Please check your credentials.'),
+            SnackBar(
+              content: Text(result['message']),
               backgroundColor: Colors.red,
             ),
           );
@@ -92,30 +97,10 @@ class _LoginScreenState extends State<LoginScreen>
       }
     } catch (e) {
       if (mounted) {
-        String errorMessage = 'An error occurred during login.';
-        
-        // Handle specific Firebase auth errors
-        if (e.toString().contains('user-not-found')) {
-          errorMessage = 'No account found with this email address.';
-        } else if (e.toString().contains('wrong-password')) {
-          errorMessage = 'Incorrect password. Please try again.';
-        } else if (e.toString().contains('invalid-email')) {
-          errorMessage = 'Please enter a valid email address.';
-        } else if (e.toString().contains('too-many-requests')) {
-          errorMessage = 'Too many failed attempts. Please try again later.';
-        } else if (e.toString().contains('network-request-failed')) {
-          errorMessage = 'Network error. Please check your connection.';
-        } else if (e.toString().contains('Invalid role')) {
-          errorMessage = 'Invalid role selected for this account.';
-        } else {
-          errorMessage = e.toString();
-        }
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -140,6 +125,141 @@ class _LoginScreenState extends State<LoginScreen>
        Navigator.pushReplacementNamed(context, '/admin');
         break;
     }
+  }
+
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Text(
+                'Reset Password',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF22223B),
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Enter your email address to receive a password reset link.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: const Color(0xFF22223B).withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        hintText: 'Enter your email',
+                        hintStyle: GoogleFonts.poppins(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading ? null : () async {
+                    if (emailController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please enter your email address'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    setState(() {
+                      isLoading = true;
+                    });
+
+                    try {
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      final result = await authProvider.resetPassword(emailController.text.trim());
+
+                      Navigator.of(context).pop();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(result['message']),
+                          backgroundColor: result['success'] ? Colors.green : Colors.red,
+                        ),
+                      );
+                    } catch (e) {
+                      setState(() {
+                        isLoading = false;
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFB5C7F7),
+                    foregroundColor: const Color(0xFF22223B),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF22223B)),
+                          ),
+                        )
+                      : Text(
+                          'Send Reset Link',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -373,11 +493,39 @@ class _LoginScreenState extends State<LoginScreen>
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your password';
                                 }
-                                if (value.length < 6) {
-                                  return 'Password must be at least 6 characters';
-                                }
                                 return null;
                               },
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Forgot Password Link
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTap: () {
+                                _showForgotPasswordDialog();
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.lock_reset_rounded,
+                                    size: 16,
+                                    color: const Color(0xFFB5C7F7),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Forgot Password?',
+                                    style: GoogleFonts.poppins(
+                                      color: const Color(0xFFB5C7F7),
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
 
